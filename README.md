@@ -68,7 +68,7 @@ chart.setOption({
 
 ```bash
 # 克隆仓库
-git clone https://github.com/your-repo/signal-chart.git
+git clone git@github.com:MIEnchating/signal-chart.git
 
 # 安装依赖
 npm install

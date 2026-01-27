@@ -21,10 +21,10 @@ graph TD
         ComponentManager -->|2. Update Lifecycle| Components
     end
 
-    subgraph Components [Component System (MVC)]
+    subgraph Components ["Component System (MVC)"]
         direction TB
-        Spec[ComponentSpec\n(Controller)] -->|Updates| Model[ComponentModel\n(Data/Layout)]
-        Spec -->|Triggers| View[ComponentView\n(Rendering)]
+        Spec[ComponentSpec\nController] -->|Updates| Model[ComponentModel\nData/Layout]
+        Spec -->|Triggers| View[ComponentView\nRendering]
         View -.->|Draws Shapes| ZRender
         Model -.->|Provides Data| View
     end
