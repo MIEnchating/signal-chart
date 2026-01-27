@@ -1,0 +1,33 @@
+{
+  "name": "signal-chart",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "频谱图可视化组件 - 基于 ZRender",
+  "main": "dist/index.cjs.js",
+  "module": "dist/index.esm.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "type-check": "tsc --noEmit"
+  },
+  "keywords": [
+    "spectrum",
+    "chart",
+    "visualization",
+    "audio",
+    "signal",
+    "zrender"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.8"
+  },
+  "dependencies": {
+    "zrender": "^5.5.0"
+  }
+}
