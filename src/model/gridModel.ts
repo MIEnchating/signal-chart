@@ -2,9 +2,9 @@
  * Grid 组件 Model - 计算网格布局
  */
 
-import { ComponentModel, ModelContext } from "./baseModel"
-import { ChartOption, GridOption } from "@/core/type"
-import { calculateRect } from "@/utils/coordinate"
+import { ComponentModel } from "./baseModel"
+import type { ChartOption, GridOption, ModelContext } from "@/types"
+import { calculateRect } from "@/utils/layout"
 
 export interface GridRect {
   x: number
@@ -57,15 +57,17 @@ export class GridModel extends ComponentModel<GridOption> {
   /**
    * 当配置或上下文更新时，重新计算
    */
-  public updateOption(globalOption: ChartOption): void {
-    super.updateOption(globalOption)
-    if (this.dirty) {
+  public updateOption(globalOption: ChartOption): boolean {
+    const hasChanged = super.updateOption(globalOption)
+    if (hasChanged) {
       this.calculateRect()
     }
+    return hasChanged
   }
 
-  public updateContext(context: Partial<ModelContext>): void {
-    super.updateContext(context)
+  public updateContext(context: Partial<ModelContext>): boolean {
+    const hasChanged = super.updateContext(context)
     this.calculateRect()
+    return hasChanged
   }
 }

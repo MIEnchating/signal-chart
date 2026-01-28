@@ -3,10 +3,10 @@
  */
 
 import { ComponentModel } from "./baseModel"
-import { AxisOption, ChartOption } from "@/core/type"
+import type { AxisOption, ChartOption } from "@/types"
 import { GridModel, GridRect } from "./gridModel"
-import { linearMap } from "@/utils/coordinate"
-import { calculateNiceTicks } from "@/utils/format"
+import { linearMap } from "@/utils/math"
+import { calculateNiceTicks } from "@/utils/math"
 
 export interface AxisTickData {
   value: number
@@ -70,7 +70,6 @@ export class AxisModel extends ComponentModel<AxisOption> {
    */
   public setGridModel(gridModel: GridModel): void {
     this.gridModel = gridModel
-    this.dirty = true
   }
 
   /**
@@ -227,10 +226,11 @@ export class AxisModel extends ComponentModel<AxisOption> {
   /**
    * 更新选项时重新计算
    */
-  public updateOption(globalOption: ChartOption): void {
-    super.updateOption(globalOption)
-    if (this.dirty && this.gridModel) {
+  public updateOption(globalOption: ChartOption): boolean {
+    const hasChanged = super.updateOption(globalOption)
+    if (hasChanged && this.gridModel) {
       this.calculateLayout()
     }
+    return hasChanged
   }
 }

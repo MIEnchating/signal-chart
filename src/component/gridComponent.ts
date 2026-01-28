@@ -2,12 +2,13 @@
  * Grid 组件 - 网格布局组件（Model + View 架构）
  */
 
-import { ChartOption } from "@/core/type"
-import { ComponentContext, ComponentSpec, ComponentType } from "./component"
+import type { ComponentContext } from "@/types"
+import { BaseComponent } from "./baseComponent"
+import { ComponentType } from "@/types"
 import { GridModel } from "@/model/gridModel"
 import { GridView } from "@/view/gridView"
 
-export class GridComponent extends ComponentSpec {
+export class GridComponent extends BaseComponent {
   type = ComponentType.Grid
   private model: GridModel
   private view: GridView
@@ -16,8 +17,8 @@ export class GridComponent extends ComponentSpec {
     super(context)
 
     // 获取容器尺寸
-    const width = this.zr.getWidth() || 800
-    const height = this.zr.getHeight() || 600
+    const width = this.zr.getWidth()!
+    const height = this.zr.getHeight()!
 
     // 创建 Model 和 View
     this.model = new GridModel({ containerWidth: width, containerHeight: height })
@@ -26,12 +27,15 @@ export class GridComponent extends ComponentSpec {
 
   init(): void {
     this.view.init()
-    this.dirty = false
+    // 保持 dirty = true，等待首次渲染
   }
 
   update(_data?: any): void {
-    if (!this.dirty) return
-
+    if (!this.dirty) {
+      console.log(`  ⏭️  [${this.type}] update() 被调用但 dirty=false，跳过渲染`)
+      return
+    }
+    console.log(`  ✏️  [${this.type}] 执行 view.render()`)
     this.view.render(this.model)
     this.dirty = false
   }
@@ -44,21 +48,17 @@ export class GridComponent extends ComponentSpec {
     this.view.destroy()
   }
 
-  onOptionUpdate(option: ChartOption): void {
-    // 更新 Model
-    this.model.updateOption(option)
-
-    // 标记需要更新
-    if (this.model.dirty) {
-      this.dirty = true
-      this.model.dirty = false
-    }
-  }
-
   /**
    * 获取 GridModel（供其他组件使用）
    */
-  public getModel(): GridModel {
+  protected getModel(): GridModel {
+    return this.model
+  }
+
+  /**
+   * 公开 API：获取 GridModel
+   */
+  public getGridModel(): GridModel {
     return this.model
   }
 }

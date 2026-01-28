@@ -1,11 +1,10 @@
 import { ComponentManager } from "./componentManage"
-import { ChartOption, ComponentConstructor, Opts } from "./type"
+import type { ChartOption, ComponentConstructor, ZRenderInitOptions, InputChartOption } from "@/types"
 import { init, registerPainter } from "zrender"
 import type { ZRenderType } from "zrender"
 import CanvasPainter from "zrender/lib/canvas/Painter"
 import SVGPainter from "zrender/lib/svg/Painter"
 import { Scheduler } from "./schedule"
-import { DeepPartial } from "@/utils/options"
 registerPainter("canvas", CanvasPainter)
 registerPainter("svg", SVGPainter)
 
@@ -20,35 +19,45 @@ export class Chart {
   // 渲染器实例
   private zr: ZRenderType
   // 调度器（负责处理option和渲染）
-  private scheduler: Scheduler | null = null
+  private scheduler: Scheduler
+
   // 构造函数私有，使用静态方法创建实例
-  private constructor(dom: HTMLElement, option: Opts) {
+  private constructor(dom: HTMLElement, option: ZRenderInitOptions) {
     this.dom = dom
     this.zr = init(dom, option as any)
     this.componentManager = new ComponentManager(this.zr)
-    // 注册全局组件
-    Chart.globalComponents.forEach(comp => {
-      this.componentManager.register(comp)
-    })
+
+    // 注册全局组件（只在第一个实例创建时需要）
+    if (Chart.globalComponents.length > 0) {
+      this.componentManager.register(Chart.globalComponents)
+    }
+
+    // 创建调度器
+    this.scheduler = new Scheduler(this.componentManager)
+
     Chart.instanceMap.set(dom, this)
   }
 
   /**
-   * 获取当前配置项（已规范化）
-   * 返回的是经过 Scheduler 规范化处理后的配置，而非用户原始输入
+   * 获取当前配置项（包含各 Model 的默认值）
+   * 返回的是从各组件 Model 收集的实际配置
    */
-  public getOption(): ChartOption | undefined {
-    return this.scheduler?.option
+  public getOption(): ChartOption {
+    return this.scheduler.getOption()
   }
+
   // 设置配置项
-  public setOption(option: DeepPartial<ChartOption>): void {
-    if (!this.scheduler) {
-      this.scheduler = new Scheduler(this.componentManager, option)
-    }
+  public setOption(option: InputChartOption): void {
     this.scheduler.processOption(option)
   }
 
-  public static init(dom: HTMLElement, option: Opts): Chart {
+  public static init(dom: HTMLElement, option: ZRenderInitOptions): Chart {
+    if (!dom) {
+      throw new Error("初始化 Chart 时，必须提供有效的 DOM 容器。")
+    }
+    if (dom.offsetWidth === 0 || dom.offsetHeight === 0) {
+      console.warn("初始化 Chart 时，传入的 DOM 容器宽高为 0，可能导致渲染异常。请确保容器有明确的宽高设置。")
+    }
     let instance = Chart.instanceMap.get(dom)
     if (instance) {
       console.warn("该 DOM 已绑定 Chart 实例，将销毁旧实例。")

@@ -2,12 +2,8 @@
  * 组件 Model 基类 - 负责数据处理和计算
  */
 
-import { ChartOption } from "@/core/type"
-
-export interface ModelContext {
-  containerWidth: number
-  containerHeight: number
-}
+import type { ChartOption, ModelContext } from "@/types"
+import { mergeOptions, deepEqual } from "@/utils/config"
 
 /**
  * 组件 Model 抽象类
@@ -15,7 +11,6 @@ export interface ModelContext {
 export abstract class ComponentModel<T = any> {
   protected option: T
   protected context: ModelContext
-  public dirty: boolean = true
 
   constructor(context: ModelContext) {
     this.context = context
@@ -36,28 +31,32 @@ export abstract class ComponentModel<T = any> {
   /**
    * 更新配置
    * @param globalOption 全局配置
+   * @returns 是否有变化
    */
-  public updateOption(globalOption: ChartOption): void {
+  public updateOption(globalOption: ChartOption): boolean {
     const newOption = this.extractOption(globalOption)
 
-    if (newOption && this.shouldUpdate(newOption)) {
-      this.option = this.mergeOption(newOption)
-      this.dirty = true
+    // 如果没有提供配置，保持当前状态（不修改 dirty）
+    // 返回 null 表示"无法判断"，让组件自己决定
+    if (!newOption) {
+      return false
     }
+
+    // 有配置时才进行比较
+    if (this.shouldUpdate(newOption)) {
+      // 使用工具类的深度合并函数
+      this.option = mergeOptions(this.option, newOption as any)
+      return true
+    }
+
+    return false
   }
 
   /**
    * 判断是否需要更新
    */
   protected shouldUpdate(newOption: T): boolean {
-    return JSON.stringify(this.option) !== JSON.stringify(newOption)
-  }
-
-  /**
-   * 合并配置（可被子类覆盖）
-   */
-  protected mergeOption(newOption: T): T {
-    return { ...this.option, ...newOption }
+    return !deepEqual(this.option, newOption)
   }
 
   /**
@@ -69,9 +68,10 @@ export abstract class ComponentModel<T = any> {
 
   /**
    * 更新上下文（如容器尺寸变化）
+   * @returns 是否有变化
    */
-  public updateContext(context: Partial<ModelContext>): void {
+  public updateContext(context: Partial<ModelContext>): boolean {
     this.context = { ...this.context, ...context }
-    this.dirty = true
+    return true
   }
 }
