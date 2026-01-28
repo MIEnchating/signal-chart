@@ -1,24 +1,28 @@
-import type { ComponentInstance, ComponentConstructor, ChartOption } from "@/types"
+import type { ComponentInstance, ComponentConstructor, ChartOption, InputChartOption } from "@/types"
 import { ComponentType } from "@/types"
-import type { ZRenderType } from "zrender"
-import { BaseComponent } from "@/component/baseComponent"
+import { BaseComponent } from "@/component/BaseComponent"
+import { GlobalModel } from "./GlobalModel"
+import { BaseChart } from "./BaseChart"
 
 // 组件管理
 export class ComponentManager {
   // 存放组件
   private components: Map<ComponentType, ComponentInstance> = new Map()
+  // 全局配置模型
+  private globalModel: GlobalModel
   /**
    *
    * @param chart 图表实例
-   * @param zr 渲染器
    */
-  constructor(public zr: ZRenderType) {}
+  constructor(public chart: BaseChart) {
+    this.globalModel = new GlobalModel()
+  }
 
   // 注册组件
   register(component: ComponentConstructor | ComponentConstructor[]) {
     const comps = Array.isArray(component) ? component : [component]
     comps.forEach(comp => {
-      const compInstance = new comp({ zr: this.zr })
+      const compInstance = new comp({ chart: this.chart })
       this.components.set(compInstance.type, compInstance)
     })
     this.setupDependencies()
@@ -60,8 +64,34 @@ export class ComponentManager {
     })
   }
 
-  // 通知所有组件更新
-  notifyAll(option: ChartOption) {
+  /**
+   * 获取当前完整配置
+   */
+  public getOption(): ChartOption {
+    return this.globalModel.getOption()
+  }
+
+  /**
+   * 处理配置更新（合并 + 通知 + 渲染）
+   */
+  public processOption(newOption: InputChartOption): void {
+    // 1. 更新 GlobalModel
+    this.globalModel.mergeOption(newOption)
+
+    // 2. 获取完整配置
+    const fullOption = this.globalModel.getOption()
+
+    // 3. 通知各组件配置变化
+    this.notifyAll(fullOption)
+
+    // 4. 执行渲染
+    this.updateAll(fullOption)
+  }
+
+  /**
+   * 通知所有组件配置已更新
+   */
+  private notifyAll(option: ChartOption) {
     this.components.forEach(component => {
       component.onOptionUpdate(option)
     })
@@ -97,13 +127,9 @@ export class ComponentManager {
 
     sortedComponents.forEach(component => {
       if (component.dirty) {
-        console.log(`  🖌️  渲染 [${component.type}]`)
         component.update(data)
-      } else {
-        console.log(`  ⏭️  跳过 [${component.type}] (无变化)`)
       }
     })
-    console.log("渲染完成。\n")
   }
 
   /**

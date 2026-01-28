@@ -27,6 +27,36 @@ function deepMerge<T extends Record<string, any>>(base: T, patch: Partial<T>): T
       continue
     }
 
+    // 特殊处理：配置数组（如 xAxis, yAxis, grid, series）按索引合并
+    if (Array.isArray(bv) && Array.isArray(pv)) {
+      // 性能优化：如果 patch 为空数组，直接使用 base
+      if (pv.length === 0) {
+        out[key as string] = bv
+        continue
+      }
+
+      const merged: any[] = []
+      const maxLen = Math.max(bv.length, pv.length)
+
+      for (let i = 0; i < maxLen; i++) {
+        if (i < pv.length && pv[i] !== undefined) {
+          // patch 数组中有值
+          if (i < bv.length && isPlainObject(bv[i]) && isPlainObject(pv[i])) {
+            // 都是对象，深度合并
+            merged[i] = deepMerge(bv[i], pv[i])
+          } else {
+            // 直接使用 patch 的值
+            merged[i] = pv[i]
+          }
+        } else if (i < bv.length) {
+          // 保留 base 数组中的值
+          merged[i] = bv[i]
+        }
+      }
+      out[key as string] = merged
+      continue
+    }
+
     // 数组/日期/函数/类实例等 -> 直接覆盖
     out[key as string] = pv
   }

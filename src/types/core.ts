@@ -56,10 +56,19 @@ export interface ChartOption {
   series: SeriesOption[]
 }
 
+interface BaseOption {
+  // 组件 ID。默认不指定。指定则可用于在 option 或者 API 中引用组件。
+  id?: string
+  // 分层（会新建画布）
+  zlevel?: number
+  // 层叠（同一画布内的图形层叠顺序）
+  z?: number
+}
+
 /**
  * 网格配置接口
  */
-export interface GridOption {
+export interface GridOption extends BaseOption {
   /** 上边距 */
   top: number | string
   /** 下边距 */
@@ -73,7 +82,8 @@ export interface GridOption {
 /**
  * 轴配置基础接口
  */
-interface BaseAxisOption {
+interface BaseAxisOption extends BaseOption {
+  gridIndex: number
   /** 是否显示 */
   show: boolean
   /** 轴类型 */

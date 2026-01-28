@@ -2,9 +2,9 @@
  * Axis 组件 Model - 计算坐标轴布局
  */
 
-import { ComponentModel } from "./baseModel"
+import { ComponentModel } from "./BaseModel"
 import type { AxisOption, ChartOption } from "@/types"
-import { GridModel, GridRect } from "./gridModel"
+import { GridModel, GridRect } from "./GridModel"
 import { linearMap } from "@/utils/math"
 import { calculateNiceTicks } from "@/utils/math"
 
@@ -30,39 +30,39 @@ export interface AxisLayoutData {
 /**
  * AxisModel - 负责计算坐标轴的刻度、标签、位置等
  */
-export class AxisModel extends ComponentModel<AxisOption> {
+export class AxisModel extends ComponentModel<AxisOption[]> {
   private gridModel: GridModel | null = null
   private layoutData: AxisLayoutData | null = null
+  // 当前处理的轴索引（支持多轴）
+  private axisIndex: number = 0
 
-  protected getDefaultOption(): AxisOption {
-    return {
-      show: true,
-      type: "value",
-      min: 0,
-      max: 100,
-      position: "bottom",
-      splitNumber: 5,
-      axisLine: {
-        show: true,
-        color: "#fff"
-      },
-      axisTick: {
-        show: true,
-        length: 6,
-        color: "#fff",
-        splitNumber: 5
-      },
-      axisLabel: {
-        show: true,
-        color: "#fff",
-        fontSize: 12
-      }
-    }
+  protected extractOption(_globalOption: ChartOption): AxisOption[] {
+    // 由子类指定是 xAxis 还是 yAxis
+    return undefined as any
   }
 
-  protected extractOption(_globalOption: ChartOption): AxisOption | undefined {
-    // 由子类指定是 xAxis 还是 yAxis
-    return undefined
+  /**
+   * 获取当前轴配置（默认第一个轴）
+   */
+  private getCurrentAxis(): AxisOption | null {
+    if (!this.option || this.option.length === 0) {
+      return null
+    }
+    return this.option[this.axisIndex] || this.option[0]
+  }
+
+  /**
+   * 获取当前轴配置（公开方法供 View 使用）
+   */
+  public getCurrentAxisOption(): AxisOption | null {
+    return this.getCurrentAxis()
+  }
+
+  /**
+   * 设置要处理的轴索引
+   */
+  public setAxisIndex(index: number): void {
+    this.axisIndex = index
   }
 
   /**
@@ -80,8 +80,15 @@ export class AxisModel extends ComponentModel<AxisOption> {
       throw new Error("GridModel not set")
     }
 
-    const gridRect = this.gridModel.getRect()
-    const { position, min, max } = this.option
+    const currentAxis = this.getCurrentAxis()
+    if (!currentAxis) {
+      throw new Error("No axis configuration available")
+    }
+
+    // 根据 gridIndex 获取对应的 grid
+    const gridIndex = currentAxis.gridIndex || 0
+    const gridRect = this.gridModel.getRect(gridIndex)
+    const { position, min, max } = currentAxis
 
     // 确定方向
     const isHorizontal = position === "top" || position === "bottom"
@@ -144,7 +151,8 @@ export class AxisModel extends ComponentModel<AxisOption> {
    */
   private calculateTicks(range: [number, number], gridRect: GridRect, isHorizontal: boolean): AxisTickData[] {
     const [min, max] = range
-    const { splitNumber } = this.option
+    const currentAxis = this.getCurrentAxis()
+    const splitNumber = currentAxis?.splitNumber || 5
 
     // 使用 Nice Numbers 算法计算刻度值
     const tickValues = calculateNiceTicks(min, max, splitNumber)
@@ -228,8 +236,9 @@ export class AxisModel extends ComponentModel<AxisOption> {
    */
   public updateOption(globalOption: ChartOption): boolean {
     const hasChanged = super.updateOption(globalOption)
-    if (hasChanged && this.gridModel) {
-      this.calculateLayout()
+    if (hasChanged) {
+      // 清除缓存的布局数据，避免使用过期数据
+      this.layoutData = null
     }
     return hasChanged
   }

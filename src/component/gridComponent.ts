@@ -3,9 +3,9 @@
  */
 
 import type { ComponentContext } from "@/types"
-import { BaseComponent } from "./baseComponent"
+import { BaseComponent } from "./BaseComponent"
 import { ComponentType } from "@/types"
-import { GridModel } from "@/model/gridModel"
+import { GridModel, GridRect } from "@/model/GridModel"
 import { GridView } from "@/view/gridView"
 
 export class GridComponent extends BaseComponent {
@@ -17,25 +17,22 @@ export class GridComponent extends BaseComponent {
     super(context)
 
     // 获取容器尺寸
-    const width = this.zr.getWidth()!
-    const height = this.zr.getHeight()!
+    const width = this.chart.getWidth()
+    const height = this.chart.getHeight()
 
     // 创建 Model 和 View
     this.model = new GridModel({ containerWidth: width, containerHeight: height })
-    this.view = new GridView(this.zr)
+    this.view = new GridView(this.chart.getZr())
   }
 
   init(): void {
     this.view.init()
-    // 保持 dirty = true，等待首次渲染
   }
 
   update(_data?: any): void {
     if (!this.dirty) {
-      console.log(`  ⏭️  [${this.type}] update() 被调用但 dirty=false，跳过渲染`)
       return
     }
-    console.log(`  ✏️  [${this.type}] 执行 view.render()`)
     this.view.render(this.model)
     this.dirty = false
   }
@@ -60,5 +57,12 @@ export class GridComponent extends BaseComponent {
    */
   public getGridModel(): GridModel {
     return this.model
+  }
+
+  /**
+   * 获取指定索引的 Grid 矩形区域
+   */
+  public getGridRect(gridIndex: number = 0): GridRect {
+    return this.model.getRect(gridIndex)
   }
 }

@@ -3,24 +3,18 @@
  */
 
 import type { ChartOption, ModelContext } from "@/types"
-import { mergeOptions, deepEqual } from "@/utils/config"
+import { deepEqual } from "@/utils/config"
 
 /**
  * 组件 Model 抽象类
  */
 export abstract class ComponentModel<T = any> {
-  protected option: T
+  protected option: T | null = null
   protected context: ModelContext
 
   constructor(context: ModelContext) {
     this.context = context
-    this.option = this.getDefaultOption()
   }
-
-  /**
-   * 获取默认配置（子类实现）
-   */
-  protected abstract getDefaultOption(): T
 
   /**
    * 从全局 ChartOption 中提取当前组件需要的配置
@@ -36,16 +30,19 @@ export abstract class ComponentModel<T = any> {
   public updateOption(globalOption: ChartOption): boolean {
     const newOption = this.extractOption(globalOption)
 
-    // 如果没有提供配置，保持当前状态（不修改 dirty）
-    // 返回 null 表示"无法判断"，让组件自己决定
-    if (!newOption) {
+    // 如果没有提供配置，保持当前状态
+    if (newOption === undefined || newOption === null) {
       return false
     }
 
-    // 有配置时才进行比较
-    if (this.shouldUpdate(newOption)) {
-      // 使用工具类的深度合并函数
-      this.option = mergeOptions(this.option, newOption as any)
+    // 对于数组类型，如果是空数组也认为是无效配置
+    if (Array.isArray(newOption) && newOption.length === 0 && !this.option) {
+      return false
+    }
+
+    // 首次设置或配置变化
+    if (!this.option || this.shouldUpdate(newOption)) {
+      this.option = newOption as T
       return true
     }
 
@@ -63,7 +60,7 @@ export abstract class ComponentModel<T = any> {
    * 获取当前配置
    */
   public getOption(): T {
-    return this.option
+    return this.option!
   }
 
   /**

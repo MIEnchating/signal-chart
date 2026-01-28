@@ -4,8 +4,8 @@
  * 包含组件相关的类型、接口和枚举
  */
 
-import type { ZRenderType } from "zrender"
 import type { ChartOption } from "./core"
+import { BaseChart } from "@/core/BaseChart"
 
 /**
  * 组件类型枚举
@@ -20,8 +20,8 @@ export enum ComponentType {
  * 组件上下文
  */
 export interface ComponentContext {
-  /** ZRender 渲染器实例 */
-  zr: ZRenderType
+  /** Chart 实例 */
+  chart: BaseChart
 }
 
 /**

@@ -3,7 +3,7 @@
  */
 
 import { ComponentView } from "./baseView"
-import { AxisModel } from "@/model/axisModel"
+import { AxisModel } from "@/model/AxisModel"
 import { Line, Text } from "zrender"
 
 /**
@@ -16,8 +16,9 @@ export class AxisView extends ComponentView<AxisModel> {
   public render(model: AxisModel): void {
     this.clear()
 
-    const option = model.getOption()
-    if (!option.show) {
+    // 获取当前轴的配置（不是数组）
+    const option = model.getCurrentAxisOption()
+    if (!option || !option.show) {
       return
     }
 
@@ -57,7 +58,8 @@ export class AxisView extends ComponentView<AxisModel> {
         lineWidth: 1
       },
       silent: true,
-      z: 1
+      zlevel: option.zlevel ?? 0,
+      z: option.z ?? 0
     })
 
     this.group.add(line)
@@ -118,8 +120,9 @@ export class AxisView extends ComponentView<AxisModel> {
         stroke: axisTick.color,
         lineWidth: 1
       },
-      silent: true,
-      z: 1
+      zlevel: option.zlevel ?? 0,
+      z: option.z ?? 0,
+      silent: true
     })
 
     this.group.add(tickLine)
@@ -169,7 +172,8 @@ export class AxisView extends ComponentView<AxisModel> {
         verticalAlign: textVerticalAlign
       },
       silent: true,
-      z: 1
+      zlevel: option.zlevel ?? 0,
+      z: option.z ?? 0
     })
 
     this.group.add(text)
@@ -206,7 +210,8 @@ export class AxisView extends ComponentView<AxisModel> {
         verticalAlign: "bottom"
       },
       silent: true,
-      z: 1
+      zlevel: option.zlevel ?? 0,
+      z: option.z ?? 0
     })
 
     this.group.add(unitText)

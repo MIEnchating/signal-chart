@@ -4,7 +4,7 @@
 
 import { Group } from "zrender"
 import type { ZRenderType } from "zrender"
-import { ComponentModel } from "@/model/baseModel"
+import { ComponentModel } from "@/model/BaseModel"
 
 /**
  * 组件 View 抽象类

@@ -2,46 +2,19 @@
  * YAxis 组件 - Y 轴组件
  */
 
-import type { ChartOption, ComponentContext, ComponentInstance, YAxisOption } from "@/types"
-import { BaseComponent } from "./baseComponent"
+import type { ChartOption, ComponentContext, ComponentInstance, AxisOption } from "@/types"
+import { BaseComponent } from "./BaseComponent"
 import { ComponentType } from "@/types"
-import { AxisModel } from "@/model/axisModel"
+import { AxisModel } from "@/model/AxisModel"
 import { AxisView } from "@/view/axisView"
-import { GridComponent } from "./gridComponent"
+import { GridComponent } from "./GridComponent"
 
 /**
  * YAxisModel - Y 轴专用 Model
  */
 class YAxisModel extends AxisModel {
-  protected getDefaultOption(): YAxisOption {
-    return {
-      show: true,
-      type: "value",
-      min: 0,
-      max: 100,
-      position: "left",
-      splitNumber: 5,
-      axisLine: {
-        show: true,
-        color: "#fff"
-      },
-      axisTick: {
-        show: true,
-        length: 6,
-        color: "#fff",
-        splitNumber: 5
-      },
-      axisLabel: {
-        show: true,
-        color: "#fff",
-        fontSize: 12
-      }
-    }
-  }
-
-  protected extractOption(globalOption: ChartOption): YAxisOption | undefined {
-    const yAxis = Array.isArray(globalOption.yAxis) ? globalOption.yAxis[0] : globalOption.yAxis
-    return yAxis
+  protected extractOption(globalOption: ChartOption): AxisOption[] {
+    return globalOption.yAxis || []
   }
 }
 
@@ -61,11 +34,11 @@ export class YAxisComponent extends BaseComponent {
   constructor(context: ComponentContext) {
     super(context)
 
-    const width = this.zr.getWidth() || 800
-    const height = this.zr.getHeight() || 600
+    const width = this.chart.getWidth()
+    const height = this.chart.getHeight()
 
     this.model = new YAxisModel({ containerWidth: width, containerHeight: height })
-    this.view = new AxisView(this.zr)
+    this.view = new AxisView(this.chart.getZr())
   }
 
   /**
@@ -77,16 +50,12 @@ export class YAxisComponent extends BaseComponent {
 
   init(): void {
     this.view.init()
-    // 保持 dirty = true，等待首次渨染
   }
 
   update(_data?: any): void {
     if (!this.dirty) {
-      console.log(`  ⏭️  [${this.type}] update() 被调用但 dirty=false，跳过渲染`)
       return
     }
-
-    console.log(`  ✏️  [${this.type}] 执行 view.render()`)
     // 确保有 GridModel
     if (this.gridComponent) {
       this.model.setGridModel(this.gridComponent.getGridModel())

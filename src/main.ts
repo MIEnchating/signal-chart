@@ -1,6 +1,6 @@
-import { GridComponent } from "@/component/gridComponent"
-import { XAxisComponent } from "@/component/xAxisComponent"
-import { YAxisComponent } from "@/component/yAxisComponent"
+import { GridComponent } from "@/component/GridComponent"
+import { XAxisComponent } from "@/component/XAxisComponent"
+import { YAxisComponent } from "@/component/YAxisComponent"
 import { Chart } from "@/core/chart"
 
 // 注册全局组件
@@ -28,5 +28,5 @@ setTimeout(() => {
   })
 }, 2000)
 
-console.log("实例:", chart)
+console.log("实例:", Chart.getInstanceByDom(app))
 console.log("当前配置:", chart.getOption())
