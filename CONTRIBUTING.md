@@ -19,44 +19,77 @@ Signal Chart 采用了 **MVP (Model-View-Presenter)** 架构的变体，通过 `
     - `config.ts`: 深度合并配置，支持数组智能合并。
     - `normalize.ts`: 配置标准化。
 
+### 架构概览 (Architecture Diagram)
+
+```mermaid
+graph TB
+  %% Styles
+  classDef core fill:#e3f2fd,stroke:#1565c0,stroke-width:1.5px,rx:6,ry:6,color:#0d47a1;
+  classDef mvp fill:#fff8e1,stroke:#ff6f00,stroke-width:1.5px,rx:6,ry:6,color:#bf360c;
+  classDef lib fill:#f3e5f5,stroke:#7b1fa2,stroke-width:1.5px,rx:6,ry:6,color:#4a148c;
+
+  subgraph CoreLayer [核心层 Core]
+    direction TB
+    Chart["Chart 入口"]:::core
+    CM["ComponentManager 调度器"]:::core
+    GM["GlobalModel 全局配置"]:::core
+  end
+
+  subgraph ComponentLayer [组件层 MVP]
+    direction TB
+    Presenter["Component (Presenter)"]:::mvp
+    Model["Model (数据/布局)"]:::mvp
+    View["View (渲染)"]:::mvp
+  end
+
+  subgraph RenderLayer [渲染层]
+    ZR["ZRender 引擎"]:::lib
+  end
+
+  Chart -->|API 入口| CM
+  CM -->|合并配置| GM
+  CM -->|生命周期调度| Presenter
+
+  Presenter -->|更新配置| Model
+  Presenter -->|触发渲染| View
+  Model -.->|计算结果| View
+  View -->|绘制图形| ZR
+```
+
 ### 数据流向 (Data Flow)
 
 ```mermaid
 sequenceDiagram
-    autonumber
-    participant U as User
-    participant C as Chart
-    participant CM as ComponentManager
-    participant GM as GlobalModel
-    participant Comp as Component (Presenter)
-    participant M as ComponentModel
-    participant V as ComponentView
+  autonumber
+  participant U as 用户
+  participant C as Chart
+  participant CM as ComponentManager
+  participant GM as GlobalModel
+  participant Comp as Component
+  participant M as Model
+  participant V as View
 
-    U->>C: setOption(option)
-    C->>CM: processOption(option)
-    CM->>GM: mergeOption(option)
-    Note right of GM: 1. Normalize<br/>2. Deep Merge<br/>3. Re-Normalize
-    GM-->>CM: fullOption
+  U->>C: setOption(option)
+  C->>CM: processOption(option)
+  CM->>GM: 规范化 + 深度合并
+  GM-->>CM: fullOption
 
-    rect rgba(0, 120, 255, 0.1)
-        Note over CM, Comp: Notification Phase
-        CM->>Comp: onOptionUpdate(fullOption)
-        Comp->>M: updateOption(fullOption)
-        alt has changes
-            M->>M: extract & compare
-            M-->>Comp: true (dirty)
-        end
+  rect rgba(0, 120, 255, 0.08)
+    Note over CM, Comp: ① 配置分发
+    CM->>Comp: onOptionUpdate(fullOption)
+    Comp->>M: updateOption(fullOption)
+    M-->>Comp: 返回 dirty 标记
+  end
+
+  rect rgba(0, 200, 100, 0.08)
+    Note over CM, V: ② 渲染更新（按依赖排序）
+    CM->>CM: topologicalSort()
+    CM->>Comp: update()
+    alt dirty = true
+      Comp->>V: render(model)
+      V->>V: 绘制 ZRender 图形
     end
-
-    rect rgba(0, 200, 100, 0.1)
-        Note over CM, V: Rendering Phase (Topological Sort)
-        CM->>CM: topologicalSort()
-        CM->>Comp: update()
-        alt is dirty
-            Comp->>V: render(model)
-            V->>V: Draw zrender shapes
-        end
-    end
+  end
 ```
 
 ## 🧩 组件系统 (Component System)
