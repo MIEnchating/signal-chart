@@ -28,6 +28,7 @@ export interface ZRenderInitOptions {
  * 用户输入的图表配置接口（部分字段可选）
  */
 export interface InputChartOption {
+  color?: string[]
   /** 背景色 */
   backgroundColor?: string
   /** 网格配置（单个或数组） */
@@ -44,6 +45,7 @@ export interface InputChartOption {
  * 规范化后的图表配置接口（所有字段必需，轴配置统一为数组）
  */
 export interface ChartOption {
+  color: string[]
   /** 背景色 */
   backgroundColor: string
   /** 网格配置数组 */
@@ -54,6 +56,18 @@ export interface ChartOption {
   yAxis: YAxisOption[]
   /** 系列配置 */
   series: SeriesOption[]
+}
+
+/**
+ * 坐标查找器（用于 convertToPixel / convertFromPixel / containPixel）
+ */
+export interface CoordinateFinder {
+  xAxisIndex?: number
+  xAxisId?: string
+  yAxisIndex?: number
+  yAxisId?: string
+  gridIndex?: number
+  gridId?: string
 }
 
 interface BaseOption {
@@ -166,16 +180,51 @@ export interface AxisUnitOption {
 /**
  * 系列类型
  */
-export type SeriesType = "spectrum" | "waterfall"
+export type SeriesType = "line" | "spectrum" | "waterfall"
 
 /**
  * 系列配置接口
  */
 export interface SeriesOption {
   id?: string
-  name: string
+  name?: string
   /** 图表类型 */
   type: SeriesType
+  show?: boolean
+  data: Array<number | [number, number]>
+  xAxisIndex?: number
+  yAxisIndex?: number
+  lineStyle?: LineStyleOption
+  smooth?: boolean
+  zlevel?: number
+  z?: number
+}
+
+/**
+ * 线条样式
+ */
+export interface LineStyleOption {
+  color?: string
+  width?: number
+}
+
+/**
+ * Line Series 配置
+ */
+export interface LineSeriesOption extends SeriesOption {
+  type: "line"
+}
+
+/**
+ * Line Series 渲染数据
+ */
+export interface LineSeriesRenderItem {
+  id?: string
+  name?: string
   show: boolean
-  data: number[]
+  points: Array<[number, number]>
+  lineStyle: { color: string; width: number }
+  smooth: boolean
+  zlevel?: number
+  z?: number
 }

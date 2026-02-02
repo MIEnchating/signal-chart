@@ -1,7 +1,6 @@
 /**
  * 组件 Model 基类 - 负责数据处理和计算
  */
-
 import type { ChartOption, ModelContext } from "@/types"
 import { deepEqual } from "@/utils/config"
 
@@ -11,6 +10,7 @@ import { deepEqual } from "@/utils/config"
 export abstract class ComponentModel<T = any> {
   protected option: T | null = null
   protected context: ModelContext
+  protected globalColor: string[] = []
 
   constructor(context: ModelContext) {
     this.context = context
@@ -28,8 +28,8 @@ export abstract class ComponentModel<T = any> {
    * @returns 是否有变化
    */
   public updateOption(globalOption: ChartOption): boolean {
+    this.globalColor = globalOption.color
     const newOption = this.extractOption(globalOption)
-
     // 如果没有提供配置，保持当前状态
     if (newOption === undefined || newOption === null) {
       return false
@@ -70,5 +70,10 @@ export abstract class ComponentModel<T = any> {
   public updateContext(context: Partial<ModelContext>): boolean {
     this.context = { ...this.context, ...context }
     return true
+  }
+
+  public getColorByIndex(index: number): string {
+    const colors = this.globalColor[index % this.globalColor.length]
+    return colors
   }
 }

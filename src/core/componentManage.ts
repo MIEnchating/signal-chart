@@ -22,7 +22,7 @@ export class ComponentManager {
   register(component: ComponentConstructor | ComponentConstructor[]) {
     const comps = Array.isArray(component) ? component : [component]
     comps.forEach(comp => {
-      const compInstance = new comp({ chart: this.chart })
+      const compInstance = new comp({ chart: this.chart, globalModel: this.globalModel })
       this.components.set(compInstance.type, compInstance)
     })
     this.setupDependencies()

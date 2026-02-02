@@ -1,10 +1,11 @@
 import { GridComponent } from "@/component/GridComponent"
+import { LineSeriesComponent } from "@/component/LineSeriesComponent"
 import { XAxisComponent } from "@/component/XAxisComponent"
 import { YAxisComponent } from "@/component/YAxisComponent"
 import { Chart } from "@/core/chart"
 
 // 注册全局组件
-Chart.use([GridComponent, XAxisComponent, YAxisComponent])
+Chart.use([GridComponent, XAxisComponent, YAxisComponent, LineSeriesComponent])
 
 // 获取容器
 const app = document.querySelector<HTMLDivElement>(".app")!
@@ -16,17 +17,28 @@ const chart = Chart.init(app, {
   renderer: "canvas"
 })
 
-// 设置配置项
-chart.setOption({})
+// 设置初始配置
+chart.setOption({
+  xAxis: {
+    min: 0,
+    max: 10
+  },
+  yAxis: {
+    min: 0,
+    max: 100
+  },
+  series: [
+    {
+      type: "line",
+      name: "频谱波形",
+      data: [0, 100, 50, 75, 20, 90, 30, 60, 10, 80, 40],
 
-setTimeout(() => {
-  chart.setOption({
-    yAxis: {
-      min: 20,
-      max: 120
+      lineStyle: {
+        color: "#ff6347"
+      }
     }
-  })
-}, 2000)
+  ]
+})
 
 console.log("实例:", Chart.getInstanceByDom(app))
 console.log("当前配置:", chart.getOption())

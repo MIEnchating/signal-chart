@@ -11,6 +11,7 @@ export type {
   ChartOption,
   InputChartOption,
   ZRenderInitOptions,
+  CoordinateFinder,
   GridOption,
   AxisOption,
   XAxisOption,
@@ -20,7 +21,10 @@ export type {
   AxisLabelOption,
   AxisUnitOption,
   SeriesOption,
-  SeriesType
+  SeriesType,
+  LineStyleOption,
+  LineSeriesOption,
+  LineSeriesRenderItem
 } from "./core"
 
 // 组件类型

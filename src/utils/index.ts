@@ -3,7 +3,7 @@
  */
 
 // 数学计算
-export { linearMap, calculateNiceTicks } from "./math"
+export { linearMap } from "./math"
 
 // 布局计算
 export { parsePercent, calculateRect } from "./layout"

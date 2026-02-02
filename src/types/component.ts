@@ -4,6 +4,7 @@
  * 包含组件相关的类型、接口和枚举
  */
 
+import { GlobalModel } from "@/core/GlobalModel"
 import type { ChartOption } from "./core"
 import { BaseChart } from "@/core/BaseChart"
 
@@ -13,7 +14,8 @@ import { BaseChart } from "@/core/BaseChart"
 export enum ComponentType {
   Grid = "grid",
   XAxis = "xAxis",
-  YAxis = "yAxis"
+  YAxis = "yAxis",
+  LineSeries = "lineSeries"
 }
 
 /**
@@ -22,6 +24,8 @@ export enum ComponentType {
 export interface ComponentContext {
   /** Chart 实例 */
   chart: BaseChart
+  /** 全局配置模型 */
+  globalModel: GlobalModel
 }
 
 /**

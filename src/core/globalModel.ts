@@ -25,6 +25,7 @@ export class GlobalModel {
    */
   private createDefaultOption(): ChartOption {
     return {
+      color: ["#91cc75", "#fac858", "#ee6666", "#73c0de", "#3ba272", "#fc8452", "#9a60b4", "#ea7ccc"],
       backgroundColor: "#000",
       grid: [
         {
@@ -105,7 +106,6 @@ export class GlobalModel {
 
     // 2. 合并配置（数组与数组合并）
     const merged = mergeOptions(this._option, normalizedInput)
-
     // 3. 最终规范化（确保结果正确）
     this._option = normalizeChartOption(merged)
   }

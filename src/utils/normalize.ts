@@ -47,7 +47,7 @@ export function normalizeAxis(axis: AxisOption | AxisOption[] | undefined): Axis
  */
 export function normalizeChartOption(option: any): ChartOption {
   return {
-    backgroundColor: option.backgroundColor ?? "#000",
+    ...option,
     grid: normalizeGrid(option.grid),
     xAxis: normalizeXAxis(option.xAxis),
     yAxis: normalizeYAxis(option.yAxis),

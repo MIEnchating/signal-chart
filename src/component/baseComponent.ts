@@ -1,6 +1,7 @@
 import type { ChartOption, ComponentType, ComponentContext, ComponentInstance } from "@/types"
 import type { ComponentModel } from "@/model/BaseModel"
 import { BaseChart } from "@/core/BaseChart"
+import { GlobalModel } from "@/core/GlobalModel"
 
 // 组件规范接口
 export abstract class BaseComponent implements ComponentInstance {
@@ -9,6 +10,7 @@ export abstract class BaseComponent implements ComponentInstance {
   // 是否需要更新
   dirty: boolean = true
   protected chart: BaseChart
+  protected globalModel: GlobalModel
 
   /**
    * 声明组件依赖（静态属性）
@@ -23,6 +25,7 @@ export abstract class BaseComponent implements ComponentInstance {
 
   constructor(context: ComponentContext) {
     this.chart = context.chart
+    this.globalModel = context.globalModel
   }
 
   // 初始化组件

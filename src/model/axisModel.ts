@@ -6,7 +6,6 @@ import { ComponentModel } from "./BaseModel"
 import type { AxisOption, ChartOption } from "@/types"
 import { GridModel, GridRect } from "./GridModel"
 import { linearMap } from "@/utils/math"
-import { calculateNiceTicks } from "@/utils/math"
 
 export interface AxisTickData {
   value: number
@@ -154,15 +153,30 @@ export class AxisModel extends ComponentModel<AxisOption[]> {
     const currentAxis = this.getCurrentAxis()
     const splitNumber = currentAxis?.splitNumber || 5
 
-    // 使用 Nice Numbers 算法计算刻度值
-    const tickValues = calculateNiceTicks(min, max, splitNumber)
+    const step = splitNumber > 0 ? (max - min) / splitNumber : 0
+    const tickValues: number[] = []
+    for (let i = 0; i <= splitNumber; i += 1) {
+      tickValues.push(min + step * i)
+    }
 
     // 计算每个刻度的像素坐标
     const pixelRange = isHorizontal
       ? [gridRect.x, gridRect.x + gridRect.width]
       : [gridRect.y + gridRect.height, gridRect.y] // Y 轴是反的
 
-    return tickValues.map(value => ({
+    const filtered = tickValues.filter(value => value >= min && value <= max)
+
+    if (!filtered.includes(min)) {
+      filtered.unshift(min)
+    }
+
+    if (!filtered.includes(max)) {
+      filtered.push(max)
+    }
+
+    const uniqueSorted = Array.from(new Set(filtered)).sort((a, b) => a - b)
+
+    return uniqueSorted.map(value => ({
       value,
       coord: linearMap(value, range, pixelRange as [number, number]),
       label: this.formatLabel(value)
@@ -181,44 +195,6 @@ export class AxisModel extends ComponentModel<AxisOption[]> {
     // 保留合适的小数位数
     const decimals = value % 1 === 0 ? 0 : 2
     return value.toFixed(decimals)
-  }
-
-  /**
-   * 数据坐标转像素坐标
-   */
-  public dataToCoord(dataValue: number): number {
-    if (!this.layoutData) {
-      this.calculateLayout()
-    }
-
-    const { range, position } = this.layoutData!
-    const gridRect = this.gridModel!.getRect()
-
-    const isHorizontal = position === "top" || position === "bottom"
-    const pixelRange = isHorizontal
-      ? [gridRect.x, gridRect.x + gridRect.width]
-      : [gridRect.y + gridRect.height, gridRect.y]
-
-    return linearMap(dataValue, range, pixelRange as [number, number])
-  }
-
-  /**
-   * 像素坐标转数据坐标
-   */
-  public coordToData(coord: number): number {
-    if (!this.layoutData) {
-      this.calculateLayout()
-    }
-
-    const { range, position } = this.layoutData!
-    const gridRect = this.gridModel!.getRect()
-
-    const isHorizontal = position === "top" || position === "bottom"
-    const pixelRange = isHorizontal
-      ? [gridRect.x, gridRect.x + gridRect.width]
-      : [gridRect.y + gridRect.height, gridRect.y]
-
-    return linearMap(coord, pixelRange as [number, number], range)
   }
 
   /**
