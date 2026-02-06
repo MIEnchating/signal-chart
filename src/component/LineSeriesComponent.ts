@@ -7,14 +7,19 @@ import { ComponentType } from "@/types"
 import { BaseComponent } from "./BaseComponent"
 import { LineSeriesModel } from "@/model/LineSeriesModel"
 import { LineSeriesView } from "@/view/lineSeriesView"
+import { batchLinearMap } from "@/utils/scale"
+import type { GridComponent } from "./GridComponent"
+import { Inject } from "@/core/decorators"
 
 export class LineSeriesComponent extends BaseComponent {
   type = ComponentType.LineSeries
 
-  static dependencies = [ComponentType.Grid, ComponentType.XAxis, ComponentType.YAxis]
-
   private model: LineSeriesModel
   private view: LineSeriesView
+
+  // 使用装饰器自动注入依赖
+  @Inject(ComponentType.Grid)
+  private gridComponent!: GridComponent
 
   constructor(context: ComponentContext) {
     super(context)
@@ -30,15 +35,37 @@ export class LineSeriesComponent extends BaseComponent {
     this.view.init()
   }
 
+  /**
+   * 统一数据更新（替换所有 line series 的数据）
+   * @param data 一帧频谱数据
+   */
+  public setDataAll(data: number[]): void {
+    this.model.setAllSeriesData(data)
+    this.render()
+  }
+
   update(_data?: any): void {
     if (!this.dirty) {
       return
+    }
+    this.render()
+    this.dirty = false
+  }
+
+  /**
+   * 执行实际渲染（内部方法）
+   * 使用批量坐标转换优化，避免逐点调用 convertToPixel
+   */
+  private render(): void {
+    // 更新裁剪区域（基于 Grid 区域）
+    if (this.gridComponent) {
+      const gridRect = this.gridComponent.getGridRect(0)
+      this.view.setClipRect(gridRect)
     }
 
     const seriesList = this.model.getSeries()
     if (seriesList.length === 0) {
       this.view.render([])
-      this.dirty = false
       return
     }
 
@@ -47,32 +74,39 @@ export class LineSeriesComponent extends BaseComponent {
         color: series.lineStyle?.color ?? "#4fd1c5",
         width: series.lineStyle?.width ?? 2
       }
-      const points: [number, number][] = []
+
       const finder = { xAxisIndex: series.xAxisIndex, yAxisIndex: series.yAxisIndex }
+      const transform = this.chart.getAxisTransform(finder)
 
-      series.data.forEach((item, index) => {
-        let xValue: number
-        let yValue: number
+      // 提取 x/y 数据值
+      const dataLen = series.data.length
+      const xValues = new Array<number>(dataLen)
+      const yValues = new Array<number>(dataLen)
 
+      for (let i = 0; i < dataLen; i++) {
+        const item = series.data[i]
         if (Array.isArray(item)) {
-          xValue = item[0]
-          yValue = item[1]
+          xValues[i] = item[0]
+          yValues[i] = item[1]
         } else {
-          xValue = index
-          yValue = item
+          xValues[i] = i
+          yValues[i] = item
         }
+      }
 
-        const pixel = this.chart.convertToPixel(finder, [xValue, yValue])
-        if (Array.isArray(pixel)) {
-          const [x, y] = pixel
-          const isInGrid = this.chart.containPixel(finder, [x, y])
+      // 批量坐标转换
+      const xPixels = transform.x ? batchLinearMap(xValues, transform.x.domain, transform.x.pixelRange) : xValues
+      const yPixels = transform.y ? batchLinearMap(yValues, transform.y.domain, transform.y.pixelRange) : yValues
 
-          // 使用 chart.containPixel 判断点是否在网格内
-          if (Number.isFinite(x) && Number.isFinite(y) && isInGrid) {
-            points.push([x, y])
-          }
+      // 组合成点数组，过滤无效值
+      const points: [number, number][] = []
+      for (let i = 0; i < dataLen; i++) {
+        const x = xPixels[i]
+        const y = yPixels[i]
+        if (Number.isFinite(x) && Number.isFinite(y)) {
+          points.push([x, y])
         }
-      })
+      }
 
       return {
         id: series.id,
@@ -87,7 +121,6 @@ export class LineSeriesComponent extends BaseComponent {
     })
 
     this.view.render(renderItems)
-    this.dirty = false
   }
 
   clear(): void {

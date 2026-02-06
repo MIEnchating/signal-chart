@@ -1,8 +1,24 @@
-import type { ComponentInstance, ComponentConstructor, ChartOption, InputChartOption } from "@/types"
+import type { ComponentInstance, ComponentConstructor, ChartOption, InputChartOption, ModelContext } from "@/types"
 import { ComponentType } from "@/types"
 import { BaseComponent } from "@/component/BaseComponent"
-import { GlobalModel } from "./GlobalModel"
+import { GlobalModel, type ConfigChangeSet } from "./GlobalModel"
 import { BaseChart } from "./BaseChart"
+import type { LineSeriesComponent } from "@/component/LineSeriesComponent"
+import type { WaterfallSeriesComponent } from "@/component/WaterfallSeriesComponent"
+
+/**
+ * 配置键到组件类型的映射
+ * 用于精准通知：只通知受影响的组件
+ */
+const CONFIG_TO_COMPONENT: Record<string, ComponentType[]> = {
+  grid: [ComponentType.Grid],
+  xAxis: [ComponentType.XAxis],
+  yAxis: [ComponentType.YAxis],
+  visualMap: [ComponentType.VisualMap],
+  series: [ComponentType.LineSeries, ComponentType.WaterfallSeries],
+  color: [ComponentType.LineSeries, ComponentType.WaterfallSeries],
+  backgroundColor: [] // 背景色变化不需要通知组件
+}
 
 // 组件管理
 export class ComponentManager {
@@ -10,10 +26,11 @@ export class ComponentManager {
   private components: Map<ComponentType, ComponentInstance> = new Map()
   // 全局配置模型
   private globalModel: GlobalModel
-  /**
-   *
-   * @param chart 图表实例
-   */
+  // 缓存拓扑排序结果
+  private sortedComponents: ComponentInstance[] = []
+  // 标记缓存是否失效
+  private sortCacheDirty = true
+
   constructor(public chart: BaseChart) {
     this.globalModel = new GlobalModel()
   }
@@ -25,28 +42,24 @@ export class ComponentManager {
       const compInstance = new comp({ chart: this.chart, globalModel: this.globalModel })
       this.components.set(compInstance.type, compInstance)
     })
+
+    // 标记缓存失效（组件列表变化）
+    this.sortCacheDirty = true
+
     this.setupDependencies()
     this.initAll()
   }
 
   /**
    * 自动建立组件依赖关系
-   *
-   * 遍历所有组件，根据其静态 dependencies 属性自动注入依赖
-   * 支持类型安全的依赖声明，避免手动硬编码
    */
   private setupDependencies(): void {
     this.components.forEach((component, _type) => {
-      // 获取组件类的静态 dependencies 属性
       const ComponentClass = component.constructor as typeof BaseComponent
       const deps = ComponentClass.dependencies || []
 
-      // 如果组件没有依赖，跳过
-      if (deps.length === 0) {
-        return
-      }
+      if (deps.length === 0) return
 
-      // 收集依赖的组件实例
       const dependencyMap = new Map<ComponentType, ComponentInstance>()
       deps.forEach(depType => {
         const depComponent = this.components.get(depType)
@@ -57,7 +70,6 @@ export class ComponentManager {
         }
       })
 
-      // 调用组件的依赖注入钩子
       if (component.onDependenciesReady) {
         component.onDependenciesReady(dependencyMap)
       }
@@ -72,29 +84,97 @@ export class ComponentManager {
   }
 
   /**
-   * 处理配置更新（合并 + 通知 + 渲染）
+   * 处理配置更新（精准 diff + 精准通知）
+   *
+   * 优化策略：
+   * 1. GlobalModel 返回变更的配置键
+   * 2. 根据映射表，只通知受影响的组件
+   * 3. 只更新 dirty 的组件
    */
   public processOption(newOption: InputChartOption): void {
-    // 1. 更新 GlobalModel
-    this.globalModel.mergeOption(newOption)
+    // 1. 更新 GlobalModel，获取变更集合
+    const changedKeys = this.globalModel.mergeOption(newOption)
 
-    // 2. 获取完整配置
+    // 2. 如果没有变化，直接返回
+    if (changedKeys.size === 0) {
+      return
+    }
+
+    // 3. 获取完整配置
     const fullOption = this.globalModel.getOption()
 
-    // 3. 通知各组件配置变化
-    this.notifyAll(fullOption)
+    // 4. 精准通知：只通知受影响的组件
+    const affectedComponents = this.getAffectedComponents(changedKeys)
+    this.notifyComponents(affectedComponents, fullOption)
 
-    // 4. 执行渲染
+    // 5. 执行渲染（只更新 dirty 的组件）
     this.updateAll(fullOption)
   }
 
   /**
-   * 通知所有组件配置已更新
+   * 根据变更的配置键，获取受影响的组件
    */
-  private notifyAll(option: ChartOption) {
+  private getAffectedComponents(changedKeys: ConfigChangeSet): Set<ComponentType> {
+    const affected = new Set<ComponentType>()
+
+    for (const key of changedKeys) {
+      const componentTypes = CONFIG_TO_COMPONENT[key] || []
+      componentTypes.forEach(type => affected.add(type))
+    }
+
+    // 处理依赖传播：如果 Grid 变了，依赖它的组件也需要更新
+    if (affected.has(ComponentType.Grid)) {
+      affected.add(ComponentType.XAxis)
+      affected.add(ComponentType.YAxis)
+      affected.add(ComponentType.LineSeries)
+      affected.add(ComponentType.WaterfallSeries)
+    }
+
+    // 如果 Axis 变了，Series 也需要更新（坐标系变化）
+    if (affected.has(ComponentType.XAxis) || affected.has(ComponentType.YAxis)) {
+      affected.add(ComponentType.LineSeries)
+      affected.add(ComponentType.WaterfallSeries)
+    }
+
+    return affected
+  }
+
+  /**
+   * 只通知受影响的组件
+   */
+  private notifyComponents(affectedTypes: Set<ComponentType>, option: ChartOption): void {
+    affectedTypes.forEach(type => {
+      const component = this.components.get(type)
+      if (component) {
+        component.onOptionUpdate(option)
+      }
+    })
+  }
+
+  /**
+   * 通知所有组件（用于初始化等场景）
+   */
+  public notifyAll(option: ChartOption) {
     this.components.forEach(component => {
       component.onOptionUpdate(option)
     })
+  }
+
+  /**
+   * 统一数据广播（高性能路径，跳过 diff）
+   */
+  public broadcastData(data: number[]): void {
+    // 更新 LineSeries（替换数据）
+    const lineSeriesComponent = this.components.get(ComponentType.LineSeries) as LineSeriesComponent | undefined
+    if (lineSeriesComponent && typeof lineSeriesComponent.setDataAll === "function") {
+      lineSeriesComponent.setDataAll(data)
+    }
+
+    // 更新 WaterfallSeries（追加数据）
+    const waterfallComponent = this.components.get(ComponentType.WaterfallSeries) as WaterfallSeriesComponent | undefined
+    if (waterfallComponent && typeof waterfallComponent.pushDataAll === "function") {
+      waterfallComponent.pushDataAll(data)
+    }
   }
 
   // 获取组件
@@ -120,10 +200,9 @@ export class ComponentManager {
     })
   }
 
-  // 更新所有组件（按依赖顺序）
+  // 更新所有组件（按依赖顺序，只更新 dirty 的）
   updateAll(data: any): void {
-    // 使用拓扑排序确定更新顺序
-    const sortedComponents = this.topologicalSort()
+    const sortedComponents = this.getSortedComponents()
 
     sortedComponents.forEach(component => {
       if (component.dirty) {
@@ -133,24 +212,50 @@ export class ComponentManager {
   }
 
   /**
+   * 获取排序后的组件列表（带缓存）
+   * 只在组件注册时重新计算，运行时直接使用缓存
+   */
+  private getSortedComponents(): ComponentInstance[] {
+    if (this.sortCacheDirty) {
+      this.sortedComponents = this.topologicalSort()
+      this.sortCacheDirty = false
+    }
+    return this.sortedComponents
+  }
+
+  /**
    * 拓扑排序：根据组件依赖关系确定更新顺序
-   *
-   * 算法：
-   * 1. 没有依赖的组件先更新（如 Grid）
-   * 2. 依赖已更新组件的组件后更新（如 Axis 依赖 Grid）
-   * 3. 确保依赖关系正确的渲染顺序
+   * 使用 DFS + 三色标记法检测循环依赖
    */
   private topologicalSort(): ComponentInstance[] {
     const sorted: ComponentInstance[] = []
-    const visited = new Set<ComponentType>()
+    const visiting = new Set<ComponentType>() // 正在访问（灰色）
+    const visited = new Set<ComponentType>()  // 已访问（黑色）
+    const path: ComponentType[] = []          // 当前访问路径（用于错误提示）
 
     const visit = (component: ComponentInstance) => {
-      if (visited.has(component.type)) return
+      const type = component.type
 
-      // 先访问依赖的组件
+      // 已访问过，直接返回
+      if (visited.has(type)) return
+
+      // 正在访问中，说明存在循环依赖
+      if (visiting.has(type)) {
+        const cycleStart = path.indexOf(type)
+        const cycle = [...path.slice(cycleStart), type]
+        throw new Error(
+          `[ComponentManager] 检测到循环依赖: ${cycle.join(' -> ')}`
+        )
+      }
+
+      // 标记为正在访问
+      visiting.add(type)
+      path.push(type)
+
       const ComponentClass = component.constructor as typeof BaseComponent
       const deps = ComponentClass.dependencies || []
 
+      // 递归访问所有依赖
       deps.forEach(depType => {
         const depComponent = this.components.get(depType)
         if (depComponent) {
@@ -158,18 +263,32 @@ export class ComponentManager {
         }
       })
 
-      // 再访问当前组件
-      visited.add(component.type)
+      // 访问完成，标记为已访问
+      visiting.delete(type)
+      path.pop()
+      visited.add(type)
       sorted.push(component)
     }
 
-    // 遍历所有组件
     this.components.forEach(component => {
       visit(component)
     })
 
     return sorted
   }
+
+  /**
+   * 处理容器尺寸变化
+   */
+  public resize(context: Partial<ModelContext>): void {
+    this.components.forEach(component => {
+      component.onResize(context)
+    })
+
+    const fullOption = this.globalModel.getOption()
+    this.updateAll(fullOption)
+  }
+
   // 清除所有组件
   clearAll(): void {
     this.components.forEach(component => {

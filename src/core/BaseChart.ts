@@ -3,6 +3,8 @@ import {
   ComponentConstructor,
   InputChartOption,
   CoordinateFinder,
+  CoordinateTransform,
+  AxisTransformParams,
   ComponentType,
   AxisOption
 } from "@/types"
@@ -12,7 +14,7 @@ import CanvasPainter from "zrender/lib/canvas/Painter"
 import SVGPainter from "zrender/lib/svg/Painter"
 import { AxisModel } from "@/model/AxisModel"
 import { GridModel } from "@/model/GridModel"
-import { linearMap } from "@/utils/math"
+import { linearMap } from "@/utils/scale"
 registerPainter("canvas", CanvasPainter)
 registerPainter("svg", SVGPainter)
 
@@ -59,6 +61,17 @@ export abstract class BaseChart {
 
   public getZr(): ZRenderType {
     return this.zr
+  }
+
+  /**
+   * 获取坐标变换参数（用于批量坐标转换）
+   * 一次性返回 x/y 轴的 domain 和 pixelRange，避免逐点调用 convertToPixel
+   */
+  public getAxisTransform(finder?: CoordinateFinder): CoordinateTransform {
+    return {
+      x: this.getAxisTransformParams("x", finder),
+      y: this.getAxisTransformParams("y", finder)
+    }
   }
 
   /**
@@ -167,6 +180,25 @@ export abstract class BaseChart {
    */
   abstract setOption(option: InputChartOption): void
 
+  /**
+   * 调整图表尺寸
+   * 容器大小改变后调用此方法重新布局和渲染
+   *
+   * @param opts 可选参数，指定新的宽高
+   */
+  public resize(opts?: { width?: number | string; height?: number | string }): void {
+    // 1. 调整 ZRender 画布尺寸
+    this.zr.resize(opts)
+
+    // 2. 通知所有组件更新布局
+    const newWidth = this.getWidth()
+    const newHeight = this.getHeight()
+    this.componentManager.resize({
+      containerWidth: newWidth,
+      containerHeight: newHeight
+    })
+  }
+
   // 实例方法：销毁当前图表
   public dispose(): void {
     // 1. 清理所有组件
@@ -192,6 +224,13 @@ export abstract class BaseChart {
     return component?.getGridModel?.() ?? null
   }
 
+  /**
+   * 获取瀑布图组件
+   */
+  public getWaterfallComponent(): any {
+    return this.componentManager.getComponent(ComponentType.WaterfallSeries)
+  }
+
   private toAxisPixel(
     axisModel: AxisModel | null,
     finder: CoordinateFinder | undefined,
@@ -208,12 +247,12 @@ export abstract class BaseChart {
     }
 
     const axisIndex = this.resolveAxisIndex(axisModel, finder, axis)
-    axisModel.setAxisIndex(axisIndex)
+    // 确保 GridModel 已设置
     axisModel.setGridModel(gridModel)
 
     try {
-      const { range, position } = axisModel.getLayoutData()
-      const axisOption = axisModel.getCurrentAxisOption()
+      const { range, position } = axisModel.getLayoutData(axisIndex)
+      const axisOption = axisModel.getAxisOption(axisIndex)
       const gridIndex = axisOption?.gridIndex ?? 0
       const gridRect = gridModel.getRect(gridIndex)
       const isHorizontal = position === "top" || position === "bottom"
@@ -243,12 +282,11 @@ export abstract class BaseChart {
     }
 
     const axisIndex = this.resolveAxisIndex(axisModel, finder, axis)
-    axisModel.setAxisIndex(axisIndex)
     axisModel.setGridModel(gridModel)
 
     try {
-      const { range, position } = axisModel.getLayoutData()
-      const axisOption = axisModel.getCurrentAxisOption()
+      const { range, position } = axisModel.getLayoutData(axisIndex)
+      const axisOption = axisModel.getAxisOption(axisIndex)
       const gridIndex = axisOption?.gridIndex ?? 0
       const gridRect = gridModel.getRect(gridIndex)
       const isHorizontal = position === "top" || position === "bottom"
@@ -303,8 +341,7 @@ export abstract class BaseChart {
     const xAxisModel = this.getAxisModel("x")
     if (xAxisModel && (finder?.xAxisIndex !== undefined || finder?.xAxisId !== undefined)) {
       const axisIndex = this.resolveAxisIndex(xAxisModel, finder, "x")
-      xAxisModel.setAxisIndex(axisIndex)
-      const axisOption = xAxisModel.getCurrentAxisOption()
+      const axisOption = xAxisModel.getAxisOption(axisIndex)
       if (axisOption?.gridIndex !== undefined) {
         return axisOption.gridIndex
       }
@@ -313,8 +350,7 @@ export abstract class BaseChart {
     const yAxisModel = this.getAxisModel("y")
     if (yAxisModel && (finder?.yAxisIndex !== undefined || finder?.yAxisId !== undefined)) {
       const axisIndex = this.resolveAxisIndex(yAxisModel, finder, "y")
-      yAxisModel.setAxisIndex(axisIndex)
-      const axisOption = yAxisModel.getCurrentAxisOption()
+      const axisOption = yAxisModel.getAxisOption(axisIndex)
       if (axisOption?.gridIndex !== undefined) {
         return axisOption.gridIndex
       }
@@ -329,6 +365,39 @@ export abstract class BaseChart {
       return Array.isArray(options) ? options : []
     } catch {
       return []
+    }
+  }
+
+  /**
+   * 获取单轴的变换参数
+   */
+  private getAxisTransformParams(axis: "x" | "y", finder?: CoordinateFinder): AxisTransformParams | null {
+    const axisModel = this.getAxisModel(axis)
+    if (!axisModel) {
+      return null
+    }
+
+    const gridModel = this.getGridModel()
+    if (!gridModel) {
+      return null
+    }
+
+    const axisIndex = this.resolveAxisIndex(axisModel, finder, axis)
+    axisModel.setGridModel(gridModel)
+
+    try {
+      const { range, position } = axisModel.getLayoutData(axisIndex)
+      const axisOption = axisModel.getAxisOption(axisIndex)
+      const gridIndex = axisOption?.gridIndex ?? 0
+      const gridRect = gridModel.getRect(gridIndex)
+      const isHorizontal = position === "top" || position === "bottom"
+      const pixelRange: [number, number] = isHorizontal
+        ? [gridRect.x, gridRect.x + gridRect.width]
+        : [gridRect.y + gridRect.height, gridRect.y]
+
+      return { domain: range, pixelRange }
+    } catch {
+      return null
     }
   }
 }

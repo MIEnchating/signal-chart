@@ -6,6 +6,7 @@
 
 import { GlobalModel } from "@/core/GlobalModel"
 import type { ChartOption } from "./core"
+import type { ModelContext } from "./model"
 import { BaseChart } from "@/core/BaseChart"
 
 /**
@@ -15,7 +16,9 @@ export enum ComponentType {
   Grid = "grid",
   XAxis = "xAxis",
   YAxis = "yAxis",
-  LineSeries = "lineSeries"
+  VisualMap = "visualMap",
+  LineSeries = "lineSeries",
+  WaterfallSeries = "waterfallSeries"
 }
 
 /**
@@ -54,6 +57,8 @@ export interface ComponentInstance {
   destroy(): void
   /** 配置项更新 */
   onOptionUpdate(option: ChartOption): void
+  /** 容器尺寸变化时调用 */
+  onResize(context: Partial<ModelContext>): void
   /** 依赖注入钩子 */
   onDependenciesReady?(dependencies: Map<ComponentType, ComponentInstance>): void
 }

@@ -2,8 +2,9 @@
  * 工具函数统一导出
  */
 
-// 数学计算
-export { linearMap } from "./math"
+// 比例尺和坐标映射工具（内部使用 D3 实现，但不暴露 D3 API）
+export { linearMap, batchLinearMap, createLinearScale, createColorScale, batchColorMap } from "./scale"
+export type { ColorMapType } from "./scale"
 
 // 布局计算
 export { parsePercent, calculateRect } from "./layout"

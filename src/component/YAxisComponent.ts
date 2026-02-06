@@ -2,12 +2,13 @@
  * YAxis 组件 - Y 轴组件
  */
 
-import type { ChartOption, ComponentContext, ComponentInstance, AxisOption } from "@/types"
+import type { ChartOption, ComponentContext, AxisOption } from "@/types"
 import { BaseComponent } from "./BaseComponent"
 import { ComponentType } from "@/types"
 import { AxisModel } from "@/model/AxisModel"
 import { AxisView } from "@/view/axisView"
 import { GridComponent } from "./GridComponent"
+import { Inject } from "@/core/decorators"
 
 /**
  * YAxisModel - Y 轴专用 Model
@@ -24,12 +25,12 @@ class YAxisModel extends AxisModel {
 export class YAxisComponent extends BaseComponent {
   type = ComponentType.YAxis
 
-  // 声明依赖：需要 Grid 组件
-  static dependencies = [ComponentType.Grid]
-
   private model: YAxisModel
   private view: AxisView
-  private gridComponent: GridComponent | null = null
+
+  // 使用装饰器自动注入 Grid 组件
+  @Inject(ComponentType.Grid)
+  private gridComponent!: GridComponent
 
   constructor(context: ComponentContext) {
     super(context)
@@ -39,13 +40,6 @@ export class YAxisComponent extends BaseComponent {
 
     this.model = new YAxisModel({ containerWidth: width, containerHeight: height })
     this.view = new AxisView(this.chart.getZr())
-  }
-
-  /**
-   * 依赖注入钩子：自动获取 Grid 组件
-   */
-  onDependenciesReady(dependencies: Map<ComponentType, ComponentInstance>): void {
-    this.gridComponent = dependencies.get(ComponentType.Grid) as unknown as GridComponent
   }
 
   init(): void {

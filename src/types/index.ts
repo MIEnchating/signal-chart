@@ -12,6 +12,8 @@ export type {
   InputChartOption,
   ZRenderInitOptions,
   CoordinateFinder,
+  AxisTransformParams,
+  CoordinateTransform,
   GridOption,
   AxisOption,
   XAxisOption,
@@ -22,9 +24,14 @@ export type {
   AxisUnitOption,
   SeriesOption,
   SeriesType,
+  SeriesDataItem,
   LineStyleOption,
   LineSeriesOption,
-  LineSeriesRenderItem
+  LineSeriesRenderItem,
+  WaterfallSeriesOption,
+  WaterfallSeriesRenderItem,
+  VisualMapOption,
+  VisualMapRenderItem
 } from "./core"
 
 // 组件类型

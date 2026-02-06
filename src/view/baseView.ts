@@ -4,12 +4,12 @@
 
 import { Group } from "zrender"
 import type { ZRenderType } from "zrender"
-import { ComponentModel } from "@/model/BaseModel"
 
 /**
  * 组件 View 抽象类
+ * 泛型 T 为 render 方法接受的数据类型
  */
-export abstract class ComponentView<M extends ComponentModel = ComponentModel> {
+export abstract class ComponentView<T = any> {
   protected zr: ZRenderType
   protected group: Group
 
@@ -26,10 +26,10 @@ export abstract class ComponentView<M extends ComponentModel = ComponentModel> {
   }
 
   /**
-   * 根据 Model 渲染（子类实现）
-   * @param model 数据模型
+   * 根据数据渲染（子类实现）
+   * @param data 渲染所需数据（可以是 Model 或预处理后的数据）
    */
-  public abstract render(model: M): void
+  public abstract render(data: T): void
 
   /**
    * 清除渲染内容

@@ -10,10 +10,22 @@ export class LineSeriesModel extends ComponentModel<LineSeriesOption[]> {
     return (globalOption.series || []).filter(series => series.type === "line") as LineSeriesOption[]
   }
 
-  // @ts-ignore
-  protected shouldUpdate(newOption: LineSeriesOption[]): boolean {
-    // 所有检查都通过，认为没有变化
-    return true
+  // shouldUpdate 使用父类的 deepEqual 实现，无需重写
+
+  /**
+   * 统一更新所有 series 的数据
+   * @param data 一帧频谱数据（一维数组）
+   */
+  public setAllSeriesData(data: number[]): void {
+    if (!this.option) return
+
+    // 更新所有 line series 的数据
+    this.option.forEach((series, index) => {
+      this.option![index] = {
+        ...series,
+        data
+      }
+    })
   }
 
   /**

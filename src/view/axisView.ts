@@ -3,8 +3,11 @@
  */
 
 import { ComponentView } from "./baseView"
-import { AxisModel } from "@/model/AxisModel"
+import { AxisModel, AxisLayoutData, AxisTickData } from "@/model/AxisModel"
+import type { AxisOption } from "@/types"
 import { Line, Text } from "zrender"
+
+type AxisPosition = "top" | "bottom" | "left" | "right"
 
 /**
  * AxisView - 负责绘制坐标轴（轴线、刻度、标签）
@@ -16,13 +19,12 @@ export class AxisView extends ComponentView<AxisModel> {
   public render(model: AxisModel): void {
     this.clear()
 
-    // 获取当前轴的配置（不是数组）
-    const option = model.getCurrentAxisOption()
+    const option = model.getAxisOption(0)
     if (!option || !option.show) {
       return
     }
 
-    const layoutData = model.getLayoutData()
+    const layoutData = model.getLayoutData(0)
 
     // 渲染轴线
     if (option.axisLine.show) {
@@ -43,7 +45,7 @@ export class AxisView extends ComponentView<AxisModel> {
   /**
    * 渲染轴线
    */
-  private renderAxisLine(layoutData: any, option: any): void {
+  private renderAxisLine(layoutData: AxisLayoutData, option: AxisOption): void {
     const { axisLine } = layoutData
 
     const line = new Line({
@@ -68,11 +70,11 @@ export class AxisView extends ComponentView<AxisModel> {
   /**
    * 渲染刻度和标签
    */
-  private renderTicksAndLabels(layoutData: any, option: any): void {
+  private renderTicksAndLabels(layoutData: AxisLayoutData, option: AxisOption): void {
     const { ticks, position } = layoutData
     const isHorizontal = position === "top" || position === "bottom"
 
-    ticks.forEach((tick: any) => {
+    ticks.forEach(tick => {
       // 渲染刻度线
       if (option.axisTick.show) {
         this.renderTick(tick, position, isHorizontal, option, layoutData)
@@ -88,7 +90,13 @@ export class AxisView extends ComponentView<AxisModel> {
   /**
    * 渲染单个刻度线
    */
-  private renderTick(tick: any, position: string, isHorizontal: boolean, option: any, layoutData: any): void {
+  private renderTick(
+    tick: AxisTickData,
+    position: AxisPosition,
+    isHorizontal: boolean,
+    option: AxisOption,
+    layoutData: AxisLayoutData
+  ): void {
     const { axisTick } = option
     const length = axisTick.length
 
@@ -131,7 +139,13 @@ export class AxisView extends ComponentView<AxisModel> {
   /**
    * 渲染刻度标签
    */
-  private renderLabel(tick: any, position: string, isHorizontal: boolean, option: any, layoutData: any): void {
+  private renderLabel(
+    tick: AxisTickData,
+    position: AxisPosition,
+    isHorizontal: boolean,
+    option: AxisOption,
+    layoutData: AxisLayoutData
+  ): void {
     const { axisLabel } = option
     const gap = 8 // 标签与轴线的间距
 
@@ -182,8 +196,10 @@ export class AxisView extends ComponentView<AxisModel> {
   /**
    * 渲染单位文本
    */
-  private renderUnit(layoutData: any, option: any): void {
+  private renderUnit(layoutData: AxisLayoutData, option: AxisOption): void {
     const { unit } = option
+    if (!unit) return
+
     const { axisLine, position } = layoutData
 
     let x: number, y: number

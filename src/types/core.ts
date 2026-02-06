@@ -37,8 +37,10 @@ export interface InputChartOption {
   xAxis?: Partial<XAxisOption> | Partial<XAxisOption>[]
   /** Y 轴配置（单个或数组） */
   yAxis?: Partial<YAxisOption> | Partial<YAxisOption>[]
+  /** 视觉映射配置（单个或数组） */
+  visualMap?: Partial<VisualMapOption> | Partial<VisualMapOption>[]
   /** 系列配置 */
-  series?: SeriesOption[]
+  series?: (SeriesOption | WaterfallSeriesOption)[]
 }
 
 /**
@@ -54,8 +56,10 @@ export interface ChartOption {
   xAxis: XAxisOption[]
   /** Y 轴配置数组 */
   yAxis: YAxisOption[]
+  /** 视觉映射配置数组 */
+  visualMap: VisualMapOption[]
   /** 系列配置 */
-  series: SeriesOption[]
+  series: (SeriesOption | WaterfallSeriesOption)[]
 }
 
 /**
@@ -68,6 +72,24 @@ export interface CoordinateFinder {
   yAxisId?: string
   gridIndex?: number
   gridId?: string
+}
+
+/**
+ * 单轴坐标变换参数
+ */
+export interface AxisTransformParams {
+  /** 数据范围 [min, max] */
+  domain: [number, number]
+  /** 像素范围 [min, max] */
+  pixelRange: [number, number]
+}
+
+/**
+ * XY 坐标变换参数（用于批量坐标转换）
+ */
+export interface CoordinateTransform {
+  x: AxisTransformParams | null
+  y: AxisTransformParams | null
 }
 
 interface BaseOption {
@@ -183,6 +205,11 @@ export interface AxisUnitOption {
 export type SeriesType = "line" | "spectrum" | "waterfall"
 
 /**
+ * 系列数据项类型
+ */
+export type SeriesDataItem = number | [number, number]
+
+/**
  * 系列配置接口
  */
 export interface SeriesOption {
@@ -191,7 +218,7 @@ export interface SeriesOption {
   /** 图表类型 */
   type: SeriesType
   show?: boolean
-  data: Array<number | [number, number]>
+  data: SeriesDataItem[]
   xAxisIndex?: number
   yAxisIndex?: number
   lineStyle?: LineStyleOption
@@ -228,3 +255,123 @@ export interface LineSeriesRenderItem {
   zlevel?: number
   z?: number
 }
+
+/**
+ * Waterfall Series 配置
+ *
+ * 智能默认值功能：
+ * - 如果配置了 colorMap 和 valueRange，系统会自动生成对应的 visualMap
+ * - 无需手动配置 visualMap，简化使用流程
+ * - 如果需要自定义 visualMap，可以显式配置（优先级更高）
+ */
+export interface WaterfallSeriesOption extends Omit<SeriesOption, "data"> {
+  type: "waterfall"
+  /** 瀑布图数据：每一行是一个时间帧的频谱数据 */
+  data: number[][]
+  /** 颜色映射方案（配置后会自动生成 visualMap） */
+  colorMap?: "viridis" | "inferno" | "plasma" | "turbo" | "cool" | "warm"
+  /** 最大显示行数（滚动窗口大小） */
+  maxRows?: number
+  /** 滚动方向：从上到下或从下到上 */
+  scrollDirection?: "down" | "up"
+  /** 数值范围（用于颜色映射，配置后会自动生成 visualMap）*/
+  valueRange?: [number, number] | "auto"
+}
+
+/**
+ * Waterfall Series 渲染数据
+ */
+export interface WaterfallSeriesRenderItem {
+  id?: string
+  name?: string
+  show: boolean
+  /** 二维数据矩阵 */
+  matrix: number[][]
+  /** 颜色映射配置 */
+  colorMap: "viridis" | "inferno" | "plasma" | "turbo" | "cool" | "warm"
+  /** 数值域（用于颜色映射）*/
+  valueRange: [number, number]
+  /** 渲染区域 */
+  rect: { x: number; y: number; width: number; height: number }
+  zlevel?: number
+  z?: number
+}
+
+/**
+ * 视觉映射组件配置（类似 ECharts 的 visualMap）
+ */
+export interface VisualMapOption extends BaseOption {
+  /** 是否显示 */
+  show: boolean
+  /** 类型：连续型 */
+  type: "continuous"
+  /** 最小值 */
+  min: number
+  /** 最大值 */
+  max: number
+  /** 颜色映射方案 */
+  colorMap: "viridis" | "inferno" | "plasma" | "turbo" | "cool" | "warm"
+  /** 关联的 series 索引（可以关联多个） */
+  seriesIndex?: number | number[]
+  /** 方向：垂直或水平 */
+  orient: "vertical" | "horizontal"
+  /** 水平位置 */
+  left?: number | string
+  /** 垂直位置 */
+  top?: number | string
+  /** 右侧位置 */
+  right?: number | string
+  /** 底部位置 */
+  bottom?: number | string
+  /** 色卡宽度（垂直时）或高度（水平时） */
+  itemWidth: number
+  /** 色卡高度（垂直时）或宽度（水平时） */
+  itemHeight: number
+  /** 刻度数量 */
+  splitNumber: number
+  /** 文本样式 */
+  textStyle: {
+    color: string
+    fontSize: number
+  }
+  /** 单位文本 */
+  unit?: {
+    show: boolean
+    text: string
+    color: string
+    fontSize: number
+  }
+}
+
+/**
+ * VisualMap 渲染数据
+ */
+export interface VisualMapRenderItem {
+  id?: string
+  show: boolean
+  /** 颜色映射方案 */
+  colorMap: "viridis" | "inferno" | "plasma" | "turbo" | "cool" | "warm"
+  /** 数值范围 */
+  valueRange: [number, number]
+  /** 渲染位置 */
+  rect: { x: number; y: number; width: number; height: number }
+  /** 方向 */
+  orient: "vertical" | "horizontal"
+  /** 刻度数量 */
+  splitNumber: number
+  /** 文本样式 */
+  textStyle: {
+    color: string
+    fontSize: number
+  }
+  /** 单位配置 */
+  unit?: {
+    show: boolean
+    text: string
+    color: string
+    fontSize: number
+  }
+  zlevel?: number
+  z?: number
+}
+

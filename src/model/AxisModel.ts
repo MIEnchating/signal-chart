@@ -3,9 +3,9 @@
  */
 
 import { ComponentModel } from "./BaseModel"
-import type { AxisOption, ChartOption } from "@/types"
+import type { AxisOption, ChartOption, ModelContext } from "@/types"
 import { GridModel, GridRect } from "./GridModel"
-import { linearMap } from "@/utils/math"
+import { linearMap } from "@/utils/scale"
 
 export interface AxisTickData {
   value: number
@@ -30,10 +30,10 @@ export interface AxisLayoutData {
  * AxisModel - 负责计算坐标轴的刻度、标签、位置等
  */
 export class AxisModel extends ComponentModel<AxisOption[]> {
+  /** GridModel 引用（由组件注入） */
   private gridModel: GridModel | null = null
-  private layoutData: AxisLayoutData | null = null
-  // 当前处理的轴索引（支持多轴）
-  private axisIndex: number = 0
+  /** 布局缓存（按 axisIndex 索引） */
+  private layoutCache: Map<number, AxisLayoutData> = new Map()
 
   protected extractOption(_globalOption: ChartOption): AxisOption[] {
     // 由子类指定是 xAxis 还是 yAxis
@@ -41,68 +41,51 @@ export class AxisModel extends ComponentModel<AxisOption[]> {
   }
 
   /**
-   * 获取当前轴配置（默认第一个轴）
+   * 获取指定轴配置
+   * @param axisIndex 轴索引，默认 0
    */
-  private getCurrentAxis(): AxisOption | null {
+  public getAxisOption(axisIndex: number = 0): AxisOption | null {
     if (!this.option || this.option.length === 0) {
       return null
     }
-    return this.option[this.axisIndex] || this.option[0]
+    return this.option[axisIndex] || this.option[0]
   }
 
   /**
-   * 获取当前轴配置（公开方法供 View 使用）
-   */
-  public getCurrentAxisOption(): AxisOption | null {
-    return this.getCurrentAxis()
-  }
-
-  /**
-   * 设置要处理的轴索引
-   */
-  public setAxisIndex(index: number): void {
-    this.axisIndex = index
-  }
-
-  /**
-   * 设置关联的 GridModel
+   * 设置关联的 GridModel（由组件在初始化时调用）
    */
   public setGridModel(gridModel: GridModel): void {
     this.gridModel = gridModel
   }
 
   /**
-   * 计算坐标轴布局数据
+   * 计算指定轴的布局数据
+   * @param axisIndex 轴索引
+   * @param gridModel 可选，传入则使用传入的，否则使用内部存储的
    */
-  public calculateLayout(): AxisLayoutData {
-    if (!this.gridModel) {
+  public calculateLayoutFor(axisIndex: number, gridModel?: GridModel): AxisLayoutData {
+    const gm = gridModel || this.gridModel
+    if (!gm) {
       throw new Error("GridModel not set")
     }
 
-    const currentAxis = this.getCurrentAxis()
-    if (!currentAxis) {
-      throw new Error("No axis configuration available")
+    const axisOption = this.getAxisOption(axisIndex)
+    if (!axisOption) {
+      throw new Error(`No axis configuration available for index ${axisIndex}`)
     }
 
-    // 根据 gridIndex 获取对应的 grid
-    const gridIndex = currentAxis.gridIndex || 0
-    const gridRect = this.gridModel.getRect(gridIndex)
-    const { position, min, max } = currentAxis
+    const gridIndex = axisOption.gridIndex || 0
+    const gridRect = gm.getRect(gridIndex)
+    const { position, min, max } = axisOption
 
-    // 确定方向
     const isHorizontal = position === "top" || position === "bottom"
     const orient = isHorizontal ? "horizontal" : "vertical"
 
-    // 计算轴线位置
     const axisLine = this.calculateAxisLine(gridRect, position)
-
-    // 计算数据范围
     const range = this.calculateRange(min, max)
+    const ticks = this.calculateTicksFor(axisOption, range, gridRect, isHorizontal)
 
-    // 计算刻度
-    const ticks = this.calculateTicks(range, gridRect, isHorizontal)
-
-    this.layoutData = {
+    const layoutData: AxisLayoutData = {
       position,
       orient,
       axisLine,
@@ -110,7 +93,22 @@ export class AxisModel extends ComponentModel<AxisOption[]> {
       range
     }
 
-    return this.layoutData
+    // 缓存计算结果
+    this.layoutCache.set(axisIndex, layoutData)
+
+    return layoutData
+  }
+
+  /**
+   * 获取布局数据（优先使用缓存）
+   * @param axisIndex 轴索引，默认 0
+   */
+  public getLayoutData(axisIndex: number = 0): AxisLayoutData {
+    const cached = this.layoutCache.get(axisIndex)
+    if (cached) {
+      return cached
+    }
+    return this.calculateLayoutFor(axisIndex)
   }
 
   /**
@@ -138,7 +136,6 @@ export class AxisModel extends ComponentModel<AxisOption[]> {
    * 计算数据范围
    */
   private calculateRange(min: number | "dataMin", max: number | "dataMax"): [number, number] {
-    // TODO: 处理 'dataMin' 和 'dataMax'，需要从 series 获取实际数据范围
     const minValue = typeof min === "number" ? min : 0
     const maxValue = typeof max === "number" ? max : 100
 
@@ -148,10 +145,14 @@ export class AxisModel extends ComponentModel<AxisOption[]> {
   /**
    * 计算刻度数据
    */
-  private calculateTicks(range: [number, number], gridRect: GridRect, isHorizontal: boolean): AxisTickData[] {
+  private calculateTicksFor(
+    axisOption: AxisOption,
+    range: [number, number],
+    gridRect: GridRect,
+    isHorizontal: boolean
+  ): AxisTickData[] {
     const [min, max] = range
-    const currentAxis = this.getCurrentAxis()
-    const splitNumber = currentAxis?.splitNumber || 5
+    const splitNumber = axisOption.splitNumber || 5
 
     const step = splitNumber > 0 ? (max - min) / splitNumber : 0
     const tickValues: number[] = []
@@ -159,10 +160,9 @@ export class AxisModel extends ComponentModel<AxisOption[]> {
       tickValues.push(min + step * i)
     }
 
-    // 计算每个刻度的像素坐标
     const pixelRange = isHorizontal
       ? [gridRect.x, gridRect.x + gridRect.width]
-      : [gridRect.y + gridRect.height, gridRect.y] // Y 轴是反的
+      : [gridRect.y + gridRect.height, gridRect.y]
 
     const filtered = tickValues.filter(value => value >= min && value <= max)
 
@@ -187,35 +187,30 @@ export class AxisModel extends ComponentModel<AxisOption[]> {
    * 格式化刻度标签
    */
   private formatLabel(value: number): string {
-    // 简单格式化，可以根据需要扩展
     if (Math.abs(value) >= 1000) {
       return value.toExponential(1)
     }
-
-    // 保留合适的小数位数
     const decimals = value % 1 === 0 ? 0 : 2
     return value.toFixed(decimals)
   }
 
   /**
-   * 获取布局数据
-   */
-  public getLayoutData(): AxisLayoutData {
-    if (!this.layoutData) {
-      return this.calculateLayout()
-    }
-    return this.layoutData
-  }
-
-  /**
-   * 更新选项时重新计算
+   * 更新选项时清除缓存
    */
   public updateOption(globalOption: ChartOption): boolean {
     const hasChanged = super.updateOption(globalOption)
     if (hasChanged) {
-      // 清除缓存的布局数据，避免使用过期数据
-      this.layoutData = null
+      this.layoutCache.clear()
     }
+    return hasChanged
+  }
+
+  /**
+   * 容器尺寸变化时清除布局缓存
+   */
+  public updateContext(context: Partial<ModelContext>): boolean {
+    const hasChanged = super.updateContext(context)
+    this.layoutCache.clear()
     return hasChanged
   }
 }

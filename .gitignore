@@ -9,3 +9,9 @@ dist
 .env
 .env.local
 coverage
+.serena
+.spec-workflow
+CLAUDE.md
+.claude
+.zcf
+
