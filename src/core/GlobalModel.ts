@@ -28,7 +28,6 @@ export class GlobalModel {
    */
   private createDefaultOption(): ChartOption {
     return {
-      color: ["#91cc75", "#fac858", "#ee6666", "#73c0de", "#3ba272", "#fc8452", "#9a60b4", "#ea7ccc"],
       backgroundColor: "#000",
       grid: [
         {
@@ -65,6 +64,14 @@ export class GlobalModel {
             show: true,
             color: "#fff",
             fontSize: 12
+          },
+          splitLine: {
+            show: false,
+            lineStyle: {
+              color: "#333",
+              width: 1,
+              type: "solid"
+            }
           }
         }
       ],
@@ -93,10 +100,38 @@ export class GlobalModel {
             show: true,
             color: "#fff",
             fontSize: 12
+          },
+          splitLine: {
+            show: false,
+            lineStyle: {
+              color: "#333",
+              width: 1,
+              type: "solid"
+            }
           }
         }
       ],
       visualMap: [],
+      tooltip: {
+        show: true,
+        trigger: "axis",
+        axisPointer: {
+          type: "line",
+          lineStyle: {
+            color: "#fff",
+            width: 1,
+            type: "dashed"
+          }
+        },
+        backgroundColor: "rgba(50, 50, 50, 0.9)",
+        borderColor: "#333",
+        borderWidth: 1,
+        textStyle: {
+          color: "#fff",
+          fontSize: 12
+        },
+        padding: 8
+      },
       series: []
     }
   }
@@ -170,39 +205,42 @@ export class GlobalModel {
     // 填充 X 轴默认值
     if (normalizedInput.xAxis && normalizedInput.xAxis.length > 0) {
       normalizedInput.xAxis = normalizedInput.xAxis.map((axis, index) => {
-        // 如果是部分配置（缺少 axisLine 等），则填充默认值
-        if (!axis.axisLine || !axis.axisTick || !axis.axisLabel) {
-          return {
-            ...defaultXAxis,
-            ...axis,
-            // 确保子配置也被正确合并
-            axisLine: axis.axisLine || defaultXAxis.axisLine,
-            axisTick: axis.axisTick || defaultXAxis.axisTick,
-            axisLabel: axis.axisLabel || defaultXAxis.axisLabel,
-            gridIndex: axis.gridIndex ?? index
-          }
+        // 深度合并：确保子配置也被正确合并
+        return {
+          ...defaultXAxis,
+          ...axis,
+          axisLine: { ...defaultXAxis.axisLine, ...axis.axisLine },
+          axisTick: { ...defaultXAxis.axisTick, ...axis.axisTick },
+          axisLabel: { ...defaultXAxis.axisLabel, ...axis.axisLabel },
+          splitLine: axis.splitLine ? {
+            ...defaultXAxis.splitLine,
+            ...axis.splitLine,
+            lineStyle: { ...defaultXAxis.splitLine.lineStyle, ...axis.splitLine.lineStyle }
+          } : defaultXAxis.splitLine,
+          unit: axis.unit ? { ...defaultXAxis.unit, ...axis.unit } : defaultXAxis.unit,
+          gridIndex: axis.gridIndex ?? index
         }
-        return axis
       })
     }
 
     // 填充 Y 轴默认值
     if (normalizedInput.yAxis && normalizedInput.yAxis.length > 0) {
       normalizedInput.yAxis = normalizedInput.yAxis.map((axis, index) => {
-        // 如果是部分配置（缺少 axisLine 等），则填充默认值
-        if (!axis.axisLine || !axis.axisTick || !axis.axisLabel) {
-          return {
-            ...defaultYAxis,
-            ...axis,
-            // 确保子配置也被正确合并
-            axisLine: axis.axisLine || defaultYAxis.axisLine,
-            axisTick: axis.axisTick || defaultYAxis.axisTick,
-            axisLabel: axis.axisLabel || defaultYAxis.axisLabel,
-            unit: axis.unit || defaultYAxis.unit,
-            gridIndex: axis.gridIndex ?? index
-          }
+        // 深度合并：确保子配置也被正确合并
+        return {
+          ...defaultYAxis,
+          ...axis,
+          axisLine: { ...defaultYAxis.axisLine, ...axis.axisLine },
+          axisTick: { ...defaultYAxis.axisTick, ...axis.axisTick },
+          axisLabel: { ...defaultYAxis.axisLabel, ...axis.axisLabel },
+          splitLine: axis.splitLine ? {
+            ...defaultYAxis.splitLine,
+            ...axis.splitLine,
+            lineStyle: { ...defaultYAxis.splitLine.lineStyle, ...axis.splitLine.lineStyle }
+          } : defaultYAxis.splitLine,
+          unit: axis.unit ? { ...defaultYAxis.unit, ...axis.unit } : axis.unit,
+          gridIndex: axis.gridIndex ?? index
         }
-        return axis
       })
     }
   }

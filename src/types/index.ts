@@ -22,6 +22,7 @@ export type {
   AxisTickOption,
   AxisLabelOption,
   AxisUnitOption,
+  SplitLineOption,
   SeriesOption,
   SeriesType,
   SeriesDataItem,
@@ -31,7 +32,8 @@ export type {
   WaterfallSeriesOption,
   WaterfallSeriesRenderItem,
   VisualMapOption,
-  VisualMapRenderItem
+  VisualMapRenderItem,
+  TooltipOption
 } from "./core"
 
 // 组件类型

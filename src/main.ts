@@ -4,6 +4,7 @@ import { WaterfallSeriesComponent } from "@/component/WaterfallSeriesComponent"
 import { XAxisComponent } from "@/component/XAxisComponent"
 import { YAxisComponent } from "@/component/YAxisComponent"
 import { VisualMapComponent } from "@/component/VisualMapComponent"
+import { TooltipComponent } from "@/component/TooltipComponent"
 import { Chart } from "@/core/chart"
 
 // 注册全局组件
@@ -12,6 +13,7 @@ Chart.use([
   XAxisComponent,
   YAxisComponent,
   VisualMapComponent,
+  TooltipComponent,
   LineSeriesComponent,
   WaterfallSeriesComponent
 ])
@@ -29,27 +31,98 @@ const chart = Chart.init(app, {
 // 设置初始配置
 chart.setOption({
   grid: [
-    { top: 40, bottom: "52%", left: 60, right: 100 },
-    { top: "52%", bottom: 40, left: 60, right: 100 }
+    { top: 40, bottom: "53%", left: 60, right: 100 },
+    { top: "53%", bottom: 40, left: 60, right: 100 }
   ],
   xAxis: [
-    { gridIndex: 0, min: 0, max: 512 },
-    { gridIndex: 1, min: 0, max: 512 }
+    {
+      gridIndex: 0,
+      min: 0,
+      max: 512,
+      axisLine: { show: true, color: "#fff" },
+      axisTick: { show: true, length: 10, color: "#fff", splitNumber: 5 },
+      axisLabel: { show: true, color: "#ccc", fontSize: 10 },
+      splitLine: { show: true, lineStyle: { color: "#333", width: 1, type: "solid" } }
+    },
+    {
+      gridIndex: 1,
+      min: 0,
+      max: 512,
+      axisLine: { show: true, color: "#fff" },
+      axisTick: { show: true, length: 10, color: "#fff", splitNumber: 5 },
+      axisLabel: { show: true, color: "#ccc", fontSize: 10 },
+      splitLine: { show: true, lineStyle: { color: "#333", width: 1, type: "solid" } }
+    }
   ],
   yAxis: [
     {
       gridIndex: 0,
       min: -100,
       max: 0,
+      axisLine: { show: true, color: "#fff" },
+      axisTick: { show: true, length: 10, color: "#fff", splitNumber: 5 },
+      axisLabel: { show: true, color: "#ccc", fontSize: 10 },
+      splitLine: { show: true, lineStyle: { color: "#333", width: 1, type: "solid" } },
       unit: { show: true, text: "dB", color: "#ccc", fontSize: 10 }
     },
     {
       gridIndex: 1,
       min: -100,
       max: 0,
+      axisLine: { show: true, color: "#fff" },
+      axisTick: { show: true, length: 10, color: "#fff", splitNumber: 5 },
+      axisLabel: { show: true, color: "#ccc", fontSize: 10 },
+      splitLine: { show: true, lineStyle: { color: "#333", width: 1, type: "solid" } },
       unit: { show: true, text: "dB", color: "#ccc", fontSize: 10 }
     }
   ],
+  visualMap: [
+    {
+      show: true,
+      type: "continuous",
+      min: -100,
+      max: 0,
+      colorMap: "turbo",
+      seriesIndex: 1,
+      orient: "vertical",
+      right: 20,
+      bottom: 40,
+      itemWidth: 20,
+      itemHeight: 240,
+      splitNumber: 5,
+      textStyle: {
+        color: "#ccc",
+        fontSize: 10
+      },
+      unit: {
+        show: true,
+        text: "dB",
+        color: "#ccc",
+        fontSize: 10
+      },
+      containLabel: true
+    }
+  ],
+  tooltip: {
+    show: true,
+    trigger: "axis",
+    axisPointer: {
+      type: "line",
+      lineStyle: {
+        color: "#fff",
+        width: 1,
+        type: "dashed"
+      }
+    },
+    backgroundColor: "rgba(50, 50, 50, 0.9)",
+    borderColor: "#333",
+    borderWidth: 1,
+    textStyle: {
+      color: "#fff",
+      fontSize: 12
+    },
+    padding: 8
+  },
   series: [
     {
       id: "spectrum",
@@ -74,9 +147,6 @@ chart.setOption({
     }
   ]
 })
-
-console.log("实例:", Chart.getInstanceByDom(app))
-console.log("当前配置:", chart.getOption())
 
 /**
  * 生成模拟频谱数据
@@ -109,5 +179,4 @@ function updateFrame() {
   requestAnimationFrame(updateFrame)
 }
 
-// 启动动画循环
 requestAnimationFrame(updateFrame)

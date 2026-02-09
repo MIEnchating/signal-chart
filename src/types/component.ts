@@ -17,6 +17,7 @@ export enum ComponentType {
   XAxis = "xAxis",
   YAxis = "yAxis",
   VisualMap = "visualMap",
+  Tooltip = "tooltip",
   LineSeries = "lineSeries",
   WaterfallSeries = "waterfallSeries"
 }

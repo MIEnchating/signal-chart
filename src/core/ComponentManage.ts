@@ -15,8 +15,8 @@ const CONFIG_TO_COMPONENT: Record<string, ComponentType[]> = {
   xAxis: [ComponentType.XAxis],
   yAxis: [ComponentType.YAxis],
   visualMap: [ComponentType.VisualMap],
+  tooltip: [ComponentType.Tooltip],
   series: [ComponentType.LineSeries, ComponentType.WaterfallSeries],
-  color: [ComponentType.LineSeries, ComponentType.WaterfallSeries],
   backgroundColor: [] // 背景色变化不需要通知组件
 }
 
@@ -47,6 +47,11 @@ export class ComponentManager {
     this.sortCacheDirty = true
 
     this.setupDependencies()
+
+    // 在初始化前，先通知所有组件更新配置
+    const defaultOption = this.globalModel.getOption()
+    this.notifyAll(defaultOption)
+
     this.initAll()
   }
 

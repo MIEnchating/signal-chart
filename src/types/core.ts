@@ -28,7 +28,6 @@ export interface ZRenderInitOptions {
  * 用户输入的图表配置接口（部分字段可选）
  */
 export interface InputChartOption {
-  color?: string[]
   /** 背景色 */
   backgroundColor?: string
   /** 网格配置（单个或数组） */
@@ -39,6 +38,8 @@ export interface InputChartOption {
   yAxis?: Partial<YAxisOption> | Partial<YAxisOption>[]
   /** 视觉映射配置（单个或数组） */
   visualMap?: Partial<VisualMapOption> | Partial<VisualMapOption>[]
+  /** 提示框配置 */
+  tooltip?: Partial<TooltipOption>
   /** 系列配置 */
   series?: (SeriesOption | WaterfallSeriesOption)[]
 }
@@ -47,7 +48,6 @@ export interface InputChartOption {
  * 规范化后的图表配置接口（所有字段必需，轴配置统一为数组）
  */
 export interface ChartOption {
-  color: string[]
   /** 背景色 */
   backgroundColor: string
   /** 网格配置数组 */
@@ -58,6 +58,8 @@ export interface ChartOption {
   yAxis: YAxisOption[]
   /** 视觉映射配置数组 */
   visualMap: VisualMapOption[]
+  /** 提示框配置 */
+  tooltip: TooltipOption
   /** 系列配置 */
   series: (SeriesOption | WaterfallSeriesOption)[]
 }
@@ -136,6 +138,8 @@ interface BaseAxisOption extends BaseOption {
   axisTick: AxisTickOption
   /** 标签配置 */
   axisLabel: AxisLabelOption
+  /** 分割线配置 */
+  splitLine: SplitLineOption
   /** 单位配置 */
   unit?: AxisUnitOption
 }
@@ -197,6 +201,49 @@ export interface AxisUnitOption {
   text: string
   color: string
   fontSize: number
+}
+
+/**
+ * 分割线配置
+ */
+export interface SplitLineOption {
+  show: boolean
+  lineStyle: {
+    color: string
+    width: number
+    type?: "solid" | "dashed" | "dotted"
+  }
+}
+
+/**
+ * Tooltip 配置
+ */
+export interface TooltipOption {
+  /** 是否显示 */
+  show: boolean
+  /** 触发类型 */
+  trigger: "axis" | "item" | "none"
+  /** 坐标轴指示器配置 */
+  axisPointer?: {
+    type: "line" | "shadow" | "cross" | "none"
+    lineStyle?: {
+      color: string
+      width: number
+      type?: "solid" | "dashed" | "dotted"
+    }
+  }
+  /** 提示框样式 */
+  backgroundColor?: string
+  borderColor?: string
+  borderWidth?: number
+  textStyle?: {
+    color: string
+    fontSize: number
+  }
+  /** 内边距 */
+  padding?: number
+  /** 格式化函数（暂不支持，预留） */
+  formatter?: string
 }
 
 /**
@@ -309,8 +356,8 @@ export interface VisualMapOption extends BaseOption {
   min: number
   /** 最大值 */
   max: number
-  /** 颜色映射方案 */
-  colorMap: "viridis" | "inferno" | "plasma" | "turbo" | "cool" | "warm"
+  /** 颜色映射方案（字符串为内置方案，数组为自定义颜色） */
+  colorMap: "viridis" | "inferno" | "plasma" | "turbo" | "cool" | "warm" | string[]
   /** 关联的 series 索引（可以关联多个） */
   seriesIndex?: number | number[]
   /** 方向：垂直或水平 */
@@ -341,6 +388,12 @@ export interface VisualMapOption extends BaseOption {
     color: string
     fontSize: number
   }
+  /**
+   * 是否包含标签在内（默认 true）
+   * - true: 自动计算标签宽度并调整位置，确保标签不超出容器
+   * - false: 不考虑标签宽度，可能导致标签超出
+   */
+  containLabel?: boolean
 }
 
 /**
@@ -349,8 +402,8 @@ export interface VisualMapOption extends BaseOption {
 export interface VisualMapRenderItem {
   id?: string
   show: boolean
-  /** 颜色映射方案 */
-  colorMap: "viridis" | "inferno" | "plasma" | "turbo" | "cool" | "warm"
+  /** 颜色映射方案（字符串为内置方案，数组为自定义颜色） */
+  colorMap: "viridis" | "inferno" | "plasma" | "turbo" | "cool" | "warm" | string[]
   /** 数值范围 */
   valueRange: [number, number]
   /** 渲染位置 */

@@ -33,13 +33,16 @@ export class LineSeriesModel extends ComponentModel<LineSeriesOption[]> {
    */
   public getSeries(): LineSeriesOption[] {
     const list = this.option || []
+    // 默认颜色列表（用于未指定颜色的 series）
+    const defaultColors = ["#5470c6", "#91cc75", "#fac858", "#ee6666", "#73c0de", "#3ba272", "#fc8452", "#9a60b4"]
+
     return list.map((item, index) => ({
       name: item.name ?? `line-${index}`,
       show: item.show ?? true,
       xAxisIndex: item.xAxisIndex ?? 0,
       yAxisIndex: item.yAxisIndex ?? 0,
       lineStyle: {
-        color: item.lineStyle?.color ?? this.getColorByIndex(index),
+        color: item.lineStyle?.color ?? defaultColors[index % defaultColors.length],
         width: item.lineStyle?.width ?? 2
       },
       data: item.data || [],

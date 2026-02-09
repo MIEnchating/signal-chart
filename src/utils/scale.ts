@@ -54,19 +54,27 @@ export function batchLinearMap(values: number[], domain: [number, number], range
 }
 
 /**
- * 颜色映射方案类型
+ * 颜色映射方案类型（字符串为内置方案，数组为自定义颜色）
  */
-export type ColorMapType = "viridis" | "inferno" | "plasma" | "turbo" | "cool" | "warm"
+export type ColorMapType = "viridis" | "inferno" | "plasma" | "turbo" | "cool" | "warm" | string[]
 
 /**
  * 创建颜色映射比例尺
  * 用于将数值映射到颜色（常用于热力图、瀑布图）
  *
  * @param domain 数据域 [min, max]
- * @param colorMap 颜色映射方案
+ * @param colorMap 颜色映射方案（字符串为内置方案，数组为自定义颜色）
  * @returns 数值到颜色的映射函数
  */
 export function createColorScale(domain: [number, number], colorMap: ColorMapType = "viridis") {
+  // 如果是数组，使用自定义颜色
+  if (Array.isArray(colorMap)) {
+    return scaleLinear<string>()
+      .domain(linspace(domain[0], domain[1], colorMap.length))
+      .range(colorMap)
+  }
+
+  // 使用内置颜色方案
   const interpolators = {
     viridis: interpolateViridis,
     inferno: interpolateInferno,
@@ -77,6 +85,18 @@ export function createColorScale(domain: [number, number], colorMap: ColorMapTyp
   }
 
   return scaleSequential(interpolators[colorMap]).domain(domain)
+}
+
+/**
+ * 生成等间距数组
+ * @param start 起始值
+ * @param stop 结束值
+ * @param num 数量
+ * @returns 等间距数组
+ */
+function linspace(start: number, stop: number, num: number): number[] {
+  const step = (stop - start) / (num - 1)
+  return Array.from({ length: num }, (_, i) => start + step * i)
 }
 
 /**

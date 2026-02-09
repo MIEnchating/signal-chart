@@ -11,6 +11,7 @@ export interface AxisTickData {
   value: number
   coord: number
   label: string
+  isMajor?: boolean  // 是否为主刻度（用于区分主刻度和小刻度）
 }
 
 export interface AxisLayoutData {
@@ -143,7 +144,7 @@ export class AxisModel extends ComponentModel<AxisOption[]> {
   }
 
   /**
-   * 计算刻度数据
+   * 计算刻度数据（包括主刻度和小刻度）
    */
   private calculateTicksFor(
     axisOption: AxisOption,
@@ -153,11 +154,25 @@ export class AxisModel extends ComponentModel<AxisOption[]> {
   ): AxisTickData[] {
     const [min, max] = range
     const splitNumber = axisOption.splitNumber || 5
+    const minorSplitNumber = axisOption.axisTick.splitNumber || 0
 
     const step = splitNumber > 0 ? (max - min) / splitNumber : 0
     const tickValues: number[] = []
+
+    // 生成主刻度
     for (let i = 0; i <= splitNumber; i += 1) {
       tickValues.push(min + step * i)
+    }
+
+    // 生成小刻度（如果配置了 minorSplitNumber）
+    if (minorSplitNumber > 0 && step > 0) {
+      const minorStep = step / (minorSplitNumber + 1)
+      for (let i = 0; i < splitNumber; i++) {
+        const majorValue = min + step * i
+        for (let j = 1; j <= minorSplitNumber; j++) {
+          tickValues.push(majorValue + minorStep * j)
+        }
+      }
     }
 
     const pixelRange = isHorizontal
@@ -176,11 +191,17 @@ export class AxisModel extends ComponentModel<AxisOption[]> {
 
     const uniqueSorted = Array.from(new Set(filtered)).sort((a, b) => a - b)
 
-    return uniqueSorted.map(value => ({
-      value,
-      coord: linearMap(value, range, pixelRange as [number, number]),
-      label: this.formatLabel(value)
-    }))
+    return uniqueSorted.map(value => {
+      // 判断是否为主刻度
+      const isMajor = Math.abs(value % step) < 0.0001 || Math.abs(value - min) < 0.0001 || Math.abs(value - max) < 0.0001
+
+      return {
+        value,
+        coord: linearMap(value, range, pixelRange as [number, number]),
+        label: isMajor ? this.formatLabel(value) : '',  // 只有主刻度显示标签
+        isMajor  // 标记是否为主刻度
+      }
+    })
   }
 
   /**

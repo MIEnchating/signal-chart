@@ -52,7 +52,9 @@ export class XAxisComponent extends BaseComponent {
     }
     // 确保有 GridModel
     if (this.gridComponent) {
-      this.model.setGridModel(this.gridComponent.getGridModel())
+      const gridModel = this.gridComponent.getGridModel()
+      this.model.setGridModel(gridModel)
+      this.view.setGridModel(gridModel)
     }
 
     this.view.render(this.model)

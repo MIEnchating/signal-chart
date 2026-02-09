@@ -63,10 +63,38 @@ export class VisualMapModel extends ComponentModel<VisualMapOption[]> {
     containerWidth: number,
     containerHeight: number
   ): { x: number; y: number; width: number; height: number } {
-    const { itemWidth, itemHeight } = option
+    const { itemWidth, itemHeight, orient, textStyle, min, max } = option
+
+    // 计算标签所需的额外空间（当 containLabel !== false 时）
+    const containLabel = option.containLabel !== false // 默认为 true
+    let labelPadding = 0
+
+    if (containLabel) {
+      if (orient === "vertical") {
+        // 垂直方向：标签在右侧
+        // 计算最大值的字符数（包括负号）
+        const maxAbsValue = Math.max(Math.abs(min), Math.abs(max))
+        const maxChars = maxAbsValue.toFixed(0).length + (min < 0 ? 1 : 0)
+
+        // 预估标签宽度：字符数 * 字体大小 * 0.6（经验系数）
+        const fontSize = textStyle?.fontSize || 10
+        const labelMaxWidth = maxChars * fontSize * 0.6
+        const tickLength = 4
+        const gap = 6
+
+        labelPadding = labelMaxWidth + tickLength + gap
+      } else {
+        // 水平方向：标签在下方
+        const fontSize = textStyle?.fontSize || 10
+        const tickLength = 4
+        const gap = 6
+
+        labelPadding = fontSize + tickLength + gap
+      }
+    }
 
     // 默认位置：右侧居中
-    let x = containerWidth - itemWidth - 20
+    let x = containerWidth - itemWidth - 20 - (orient === "vertical" ? labelPadding : 0)
     let y = containerHeight / 2 - itemHeight / 2
 
     // 处理 left/right
@@ -75,7 +103,7 @@ export class VisualMapModel extends ComponentModel<VisualMapOption[]> {
     } else if (option.right !== undefined) {
       const rightValue =
         typeof option.right === "number" ? option.right : parsePercent(option.right, containerWidth)
-      x = containerWidth - rightValue - itemWidth
+      x = containerWidth - rightValue - itemWidth - (orient === "vertical" ? labelPadding : 0)
     }
 
     // 处理 top/bottom
@@ -84,7 +112,7 @@ export class VisualMapModel extends ComponentModel<VisualMapOption[]> {
     } else if (option.bottom !== undefined) {
       const bottomValue =
         typeof option.bottom === "number" ? option.bottom : parsePercent(option.bottom, containerHeight)
-      y = containerHeight - bottomValue - itemHeight
+      y = containerHeight - bottomValue - itemHeight - (orient === "horizontal" ? labelPadding : 0)
     }
 
     return {
